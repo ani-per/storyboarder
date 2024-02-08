@@ -146,7 +146,7 @@ for i in range(n_pack): # Loop over packets
                     src_run.italic = True
 
                 # If the question's not a Director, add the director credit for the source of the current slide
-                if q_db.iloc[0]["Type"] != "Director":
+                if (q_db.iloc[0]["Type"] != "Director") or (q_db.iloc[0]["Type"] == "Director" and not pd.isna(q_db.iloc[k]["Director"])):
                     if (k > 0) and (pd.isna(q_db.iloc[k]["Director"])) and not (pd.isna(q_db.iloc[0]["Director"])):
                         dir_raw = f" (dir. {q_db.iloc[0]['Director']})"
                     elif not (pd.isna(q_db.iloc[k]["Director"])):
