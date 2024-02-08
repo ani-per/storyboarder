@@ -2,9 +2,9 @@ import itertools as it  # Readable nested for loops
 from pathlib import Path  # Filepaths
 import typing  # Argument / output type checking
 import pandas as pd # DataFrames
-import docx as docx # Word documents
-from haggis.files.docx import list_number # Misc Word document utils
-from re import sub
+import docx as docx # Word documents - https://github.com/python-openxml/python-docx
+from haggis.files.docx import list_number # Misc Word document utils - https://gitlab.com/madphysicist/haggis
+from re import sub, search
 
 from subprocess import call
 from platform import system
@@ -12,7 +12,73 @@ from os import startfile
 
 # https://stackoverflow.com/a/38234962
 def make_curly(str):
-    return sub(r"(\s|^)\'(.*?)\'(\s|$)", r"\1‘\2’\3", sub(r"\"(.*?)\"", r"“\1”", str))
+    return sub(r"(\s|^)\'(.*?)\'(\s|$)", r"\1‘\2’\3", sub(r"\"(.*?)\"", r"“\1”", str)).replace("\'", "’")
+
+def write_answerline(ans_par, ans_raw, ans_type):
+    ans_split = ans_raw.split(" [")
+    main_ans = ans_split[0]
+
+    # Style the main answerline first
+    if ans_type in ["Director", "Crew", "Figure"]:
+        main_names = main_ans.split(" ")
+        n_main_names = len(main_names)
+        main_runs = n_main_names*[None]
+        for i in range(n_main_names):
+            main_runs[i] = ans_par.add_run(main_names[i])
+            if (i == (n_main_names - 1)):
+                main_runs[i].bold = True
+                main_runs[i].underline = True
+            else:
+                ans_par.add_run(" ")
+    else:
+        main_run = ans_par.add_run(main_ans)
+        main_run.bold = True
+        main_run.underline = True
+    if ans_type == "Film":
+        main_run.italic = True
+
+    if (len(ans_split) > 1):
+        # Style the alt answerlines if they exist
+        alt_ans = search(r'\[(.*?)\]', "[" + ans_split[1]).group(1).split("; ")
+        n_alt_ans = len(alt_ans)
+        alt_ans_runs = n_alt_ans*[None]
+        for i in range(n_alt_ans):
+            for directive in ["or ", "accept ", "prompt on ", "reject "]:
+                if alt_ans[i].startswith(directive):
+                    if (i == 0):
+                        ans_par.add_run(" [")
+                    ans_par.add_run(directive)
+                    if ans_type in ["Director", "Crew", "Figure"]:
+                        alt_names = alt_ans[i].split(directive)[-1].split(" ")
+                        n_alt_names = len(alt_names)
+                        alt_name_runs = n_alt_names*[None]
+                        for j in range(n_alt_names):
+                            alt_name_runs[j] = ans_par.add_run(alt_names[j])
+                            if (j == (n_alt_names - 1)):
+                                if not directive.startswith("reject"):
+                                    alt_name_runs[j].underline = True
+                                    if not directive.startswith("prompt"):
+                                        alt_name_runs[j].bold = True
+                                    if ans_type == "Film":
+                                        alt_name_runs[j].italic = True
+                            else:
+                                ans_par.add_run(" ")
+                    else:
+                        alt_ans_runs[i] = ans_par.add_run(alt_ans[i].split(directive)[-1])
+                        if not directive.startswith("reject"):
+                            alt_ans_runs[i].underline = True
+                            if not directive.startswith("prompt"):
+                                alt_ans_runs[i].bold = True
+                            if ans_type == "Film":
+                                alt_ans_runs[i].italic = True
+                    if (i == (n_alt_ans - 1)):
+                        ans_par.add_run("]")
+                    else:
+                        ans_par.add_run("; ")
+
+def style_doc(tmpl):
+    # tmpl.styles['Heading 1'].font = ""
+    pass
 
 set_dir = Path.cwd() / "demo"
 set_name = f"Untitled Film Set"
@@ -24,9 +90,9 @@ if split_docs: # TODO
     pass
 else:
     ans_tmpl = docx.Document()
-    ans_docx = (set_dir / f"{set_slug}_Answers.docx") # Output: ans_raw document (docx)
-    ans_md = (set_dir / f"{set_slug}_Answers.md") # Output: ans_raw document (md)
-    ans_txt = (set_dir / f"{set_slug}_Answers.txt") # Output: ans_raw document (md)
+    ans_docx = (set_dir / f"{set_slug}_Answers-raw.docx") # Output: ans_raw document (docx)
+    ans_md = (set_dir / f"{set_slug}_Answers-raw.md") # Output: ans_raw document (md)
+    ans_txt = (set_dir / f"{set_slug}_Answers-raw.txt") # Output: ans_raw document (md)
 
 n_pack = ans_db["Packet"].max()
 n_q = ans_db["Number"].max()
@@ -35,6 +101,8 @@ n_q = ans_db["Number"].max()
 packets = n_pack*[None]
 answers = n_pack*[n_q*[None]]
 slides = n_pack*[n_q*[[None]]]
+
+style_doc(ans_tmpl)
 
 ans_tmpl.add_heading(f"{set_name} - Visual Answerlines", level=0)
 for i in range(n_pack): # Loop over packets
@@ -46,12 +114,15 @@ for i in range(n_pack): # Loop over packets
         # Filter just the current question
         q_db = ans_db[(ans_db["Packet"] == (i + 1)) & (ans_db["Number"] == (j + 1))]
 
-        # Prepare the answerline
-        ans_raw = make_curly(q_db.iloc[0]["Answerline"])
-        if q_db.iloc[0]["Type"] == "Film": # If it's a film, we can just list the director here
-            ans_raw += f" (dir. {q_db.iloc[0]['Director']})"
         # Write the answerline
-        answers[i][j] = ans_tmpl.add_paragraph(ans_raw, style="List Number")
+        answers[i][j] = ans_tmpl.add_paragraph("", style="List Number")
+        write_answerline(answers[i][j], make_curly(q_db.iloc[0]["Answerline"]), q_db.iloc[0]["Type"])
+        if q_db.iloc[0]["Type"] == "Film": # If it's a film, we can just list the director here
+            dir_raw = f" (dir. {q_db.iloc[0]['Director']})"
+            answers[i][j].add_run(dir_raw)
+        if not pd.isna(q_db.iloc[0]["Notes"]):
+            notes_raw = f" ({q_db.iloc[0]['Notes']})"
+            answers[i][j].add_run(notes_raw)
         if (j == 0):
             list_number(ans_tmpl, answers[i][j], prev=None, level=0)
         else:
