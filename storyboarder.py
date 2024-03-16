@@ -94,7 +94,7 @@ else:
     ans_md = (set_dir / f"{set_slug}_Answers-raw.md") # Output: ans_raw document (md)
     ans_txt = (set_dir / f"{set_slug}_Answers-raw.txt") # Output: ans_raw document (md)
 
-n_pack = ans_db["Packet"].max()
+n_pack = int(max([x for x in ans_db["Packet"].apply(pd.to_numeric, errors="coerce").unique() if ~pd.isnull(x)]))
 n_q = ans_db["Number"].max()
 n_q = ans_db["Number"].max()
 
