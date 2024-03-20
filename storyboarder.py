@@ -77,13 +77,15 @@ def write_answerline(ans_par, ans_raw, ans_type):
                         ans_par.add_run("; ")
 
 def style_doc(tmpl):
-    # tmpl.styles['Heading 1'].font = ""
+    # tmpl.styles["Heading 1"].font = ""
     pass
 
 set_dir = Path.cwd() / "demo"
 set_name = f"Untitled Film Set"
 set_slug = set_name.title().replace(" ", "-")
 ans_db = pd.read_csv((set_dir / "Untitled-Film-Set_Database.csv")).convert_dtypes() # Source: Database CSV
+
+hybrid = False
 
 split_docs = False # Should the answerline documents be split?
 if split_docs: # TODO
@@ -95,7 +97,6 @@ else:
     ans_txt = (set_dir / f"{set_slug}_Answers-raw.txt") # Output: ans_raw document (md)
 
 n_pack = int(max([x for x in ans_db["Packet"].apply(pd.to_numeric, errors="coerce").unique() if ~pd.isnull(x)]))
-n_q = ans_db["Number"].max()
 n_q = ans_db["Number"].max()
 
 packets = n_pack*[None]
@@ -112,7 +113,7 @@ for i in range(n_pack): # Loop over packets
     packets[i] = ans_tmpl.add_heading(pack_raw, level=1)
     for j in range(n_q): # Loop over questions
         # Filter just the current question
-        q_db = ans_db[(ans_db["Packet"] == (i + 1)) & (ans_db["Number"] == (j + 1))]
+        q_db = ans_db[(ans_db["Packet"] == list(ans_db["Packet"].unique())[i]) & (ans_db["Number"] == (j + 1))]
 
         # Write the answerline
         answers[i][j] = ans_tmpl.add_paragraph("", style="List Number")
@@ -167,7 +168,7 @@ ans_tmpl.save(ans_docx)
 # https://stackoverflow.com/a/435669
 if system() == "Darwin": # MacOS
     call(("open", ans_docx))
-elif system() == 'Windows': # Windows
+elif system() == "Windows": # Windows
     startfile(ans_docx)
 else: # Linux variants
     call(("xdg-open", ans_docx))
