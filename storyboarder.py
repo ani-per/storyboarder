@@ -80,87 +80,116 @@ def style_doc(tmpl):
     # tmpl.styles["Heading 1"].font = ""
     pass
 
-set_dir = Path.cwd() / "demo"
+verbose = True
+
+db_dir = Path.cwd() / "demo"
 set_name = f"Untitled Film Set"
 set_slug = set_name.title().replace(" ", "-")
-ans_db = pd.read_csv((set_dir / "Untitled-Film-Set_Database.csv")).convert_dtypes() # Source: Database CSV
+ans_db = pd.read_csv((db_dir / f"{set_slug}_Database.csv")).convert_dtypes() # Source: Database CSV
 
 hybrid = False
+set_dir = Path.home() / "Documents" / "quizbowl" / "oligo" / "tournaments" / "untitled-film-set" / "packets"
 
 split_docs = False # Should the answerline documents be split?
 if split_docs: # TODO
     pass
 else:
     ans_tmpl = docx.Document()
-    ans_docx = (set_dir / f"{set_slug}_Answers-raw.docx") # Output: ans_raw document (docx)
-    ans_md = (set_dir / f"{set_slug}_Answers-raw.md") # Output: ans_raw document (md)
-    ans_txt = (set_dir / f"{set_slug}_Answers-raw.txt") # Output: ans_raw document (md)
+    ans_docx = (db_dir / f"{set_slug}_Answers-raw.docx") # Output: ans_raw document (docx)
+    ans_md = (db_dir / f"{set_slug}_Answers-raw.md") # Output: ans_raw document (md)
+    ans_txt = (db_dir / f"{set_slug}_Answers-raw.txt") # Output: ans_raw document (md)
 
-n_pack = int(max([x for x in ans_db["Packet"].apply(pd.to_numeric, errors="coerce").unique() if ~pd.isnull(x)]))
-n_q = ans_db["Number"].max()
-
+pack_names = list(ans_db["Packet"].unique())
+n_pack = len(pack_names)
 packets = n_pack*[None]
-answers = n_pack*[n_q*[None]]
-slides = n_pack*[n_q*[[None]]]
+answers = n_pack*[ans_db["Number"].max()*[None]]
+slides = n_pack*[ans_db["Number"].max()*[[None]]]
 
 style_doc(ans_tmpl)
+
+# Use curly quotes
+for col in ["Answerline", "Source", "Director", "Notes"]:
+    ans_db[col] = ans_db[col].apply(lambda s: make_curly(s) if pd.notnull(s) else s)
 
 ans_tmpl.add_heading(f"{set_name} - Visual Answerlines", level=0)
 for i in range(n_pack): # Loop over packets
     if (i > 0):
         ans_tmpl.add_page_break()
-    pack_raw = f"Packet {i + 1}"
+    pack_raw = f"Packet {pack_names[i]}"
     packets[i] = ans_tmpl.add_heading(pack_raw, level=1)
-    for j in range(n_q): # Loop over questions
+
+    if verbose:
+        print(pack_raw)
+
+    # Filter just the current packet
+    pack_db = ans_db[ans_db["Packet"] == pack_names[i]]
+
+    for j in range(pack_db["Number"].max()): # Loop over questions
         # Filter just the current question
-        q_db = ans_db[(ans_db["Packet"] == list(ans_db["Packet"].unique())[i]) & (ans_db["Number"] == (j + 1))]
+        q_db = pack_db[pack_db["Number"] == (j + 1)]
 
-        # Write the answerline
-        answers[i][j] = ans_tmpl.add_paragraph("", style="List Number")
-        write_answerline(answers[i][j], make_curly(q_db.iloc[0]["Answerline"]), q_db.iloc[0]["Type"])
-        if q_db.iloc[0]["Type"] == "Film": # If it's a film, we can just list the director here
-            dir_raw = f" (dir. {q_db.iloc[0]['Director']})"
-            answers[i][j].add_run(dir_raw)
-        if not pd.isna(q_db.iloc[0]["Notes"]):
-            notes_raw = f" ({q_db.iloc[0]['Notes']})"
-            answers[i][j].add_run(notes_raw)
-        if (j == 0):
-            list_number(ans_tmpl, answers[i][j], prev=None, level=0)
-        else:
-            list_number(ans_tmpl, answers[i][j], prev=answers[i][j - 1])
+        # Only process if the answerline is not empty
+        if pd.notnull(q_db.iloc[0]["Answerline"]):
+            # Write the answerline
+            answers[i][j] = ans_tmpl.add_paragraph("", style="List Number")
+            write_answerline(answers[i][j], q_db.iloc[0]["Answerline"], q_db.iloc[0]["Type"])
 
-        # Prepare the slide annotations, if it's not a film
-        if q_db.iloc[0]["Type"] != "Film":
-            n_slide = q_db.shape[0]
-            slides[i][j] = n_slide*[None]
-            for k in range(n_slide): # Loop over slides
-                # Add an annotation if there's a source listed for the current slide
-                if pd.isna(q_db.iloc[k]["Source"]):
-                    src_raw = ""
-                else:
-                    src_raw = make_curly(q_db.iloc[k]["Source"])
+            if verbose:
+                print(f"{j + 1}: " + q_db.iloc[0]["Answerline"])
 
-                # Write the slide annotation
-                slides[i][j][k] = ans_tmpl.add_paragraph("", style="List Number 2")
-                src_run = slides[i][j][k].add_run(src_raw)
-                if (len(src_raw) > 0) and not (q_db.iloc[k]["Source"].startswith("\"")): # Don't italicize if title's in quotes (e.g. music video)
-                    src_run.italic = True
+            # If hybrid, make the placeholder question
+            if hybrid and set_dir.exists():
+                set_packs = sorted(set_dir.glob("**/*.docx"))
+                if len(list(set_packs)) == n_pack:
+                    pass
 
-                # If the question's not a Director, add the director credit for the source of the current slide
-                if (q_db.iloc[0]["Type"] != "Director") or (q_db.iloc[0]["Type"] == "Director" and not pd.isna(q_db.iloc[k]["Director"])):
-                    if (k > 0) and (pd.isna(q_db.iloc[k]["Director"])) and not (pd.isna(q_db.iloc[0]["Director"])):
-                        dir_raw = f" (dir. {q_db.iloc[0]['Director']})"
-                    elif not (pd.isna(q_db.iloc[k]["Director"])):
-                        dir_raw = f" (dir. {q_db.iloc[k]['Director']})"
+            # If it's a film, we can just list the director here
+            if q_db.iloc[0]["Type"] == "Film":
+                dir_raw = f" (dir. {q_db.iloc[0]['Director']})"
+                answers[i][j].add_run(dir_raw)
+
+            # If there are notes, write them
+            if not pd.isna(q_db.iloc[0]["Notes"]):
+                notes_raw = f" ({q_db.iloc[0]['Notes']})"
+                answers[i][j].add_run(notes_raw)
+
+            if (j == 0):
+                list_number(ans_tmpl, answers[i][j], prev=None, level=0)
+            else:
+                list_number(ans_tmpl, answers[i][j], prev=answers[i][j - 1])
+
+            # Prepare the slide annotations, if it's not a film
+            if q_db.iloc[0]["Type"] != "Film":
+                n_slide = q_db.shape[0]
+                slides[i][j] = n_slide*[None]
+                for k in range(n_slide): # Loop over slides
+                    # Add an annotation if there's a source listed for the current slide
+                    if pd.isna(q_db.iloc[k]["Source"]):
+                        src_raw = ""
                     else:
-                        dir_raw = ""
-                    slides[i][j][k].add_run(dir_raw)
+                        src_raw = q_db.iloc[k]["Source"]
 
-                # Format the annotation as a list element
-                if (k == 0):
-                    list_number(ans_tmpl, slides[i][j][k], prev=None, level=0)
-                else:
-                    list_number(ans_tmpl, slides[i][j][k], prev=slides[i][j][k - 1])
+                    # Write the slide annotation
+                    slides[i][j][k] = ans_tmpl.add_paragraph("", style="List Number 2")
+                    src_run = slides[i][j][k].add_run(src_raw)
+                    if (len(src_raw) > 0) and not (q_db.iloc[k]["Source"].startswith(("\'", "\"", "‘", "“"))): # Don't italicize if title's in quotes (e.g. music video)
+                        src_run.italic = True
+
+                    # If the question's not a Director, add the director credit for the source of the current slide
+                    if (q_db.iloc[0]["Type"] != "Director") or (q_db.iloc[0]["Type"] == "Director" and not pd.isna(q_db.iloc[k]["Director"])):
+                        if (k > 0) and (pd.isna(q_db.iloc[k]["Director"])) and not (pd.isna(q_db.iloc[0]["Director"])):
+                            dir_raw = f" (dir. {q_db.iloc[0]['Director']})"
+                        elif not (pd.isna(q_db.iloc[k]["Director"])):
+                            dir_raw = f" (dir. {q_db.iloc[k]['Director']})"
+                        else:
+                            dir_raw = ""
+                        slides[i][j][k].add_run(dir_raw)
+
+                    # Format the annotation as a list element
+                    if (k == 0):
+                        list_number(ans_tmpl, slides[i][j][k], prev=None, level=0)
+                    else:
+                        list_number(ans_tmpl, slides[i][j][k], prev=slides[i][j][k - 1])
 
 # Write the document
 ans_tmpl.save(ans_docx)
