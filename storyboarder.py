@@ -4,7 +4,7 @@ import typing # Argument / output type checking
 import pandas as pd # DataFrames
 import docx as docx # Word documents - https://github.com/python-openxml/python-docx
 from haggis.files.docx import list_number # Misc Word document utils - https://gitlab.com/madphysicist/haggis
-from re import sub, search
+from re import sub, search, findall
 
 from subprocess import call
 from platform import system
@@ -88,12 +88,22 @@ def style_doc(tmpl):
     # tmpl.styles["Heading 1"].font = ""
     pass
 
+# Set parameters
+
 verbose = True
 
-db_dir = Path.cwd() / "demo"
 set_name = f"Untitled Film Set"
 set_slug = set_name.title().replace(" ", "-")
+
+db_dir = Path.cwd() / "demo"
 ans_db = pd.read_csv((db_dir / f"{set_slug}_Database.csv")).convert_dtypes() # Source: Database CSV
+
+# Is the set a hybrid visual-written tournament?
+hybrid = True
+raw_string = "W" # "_raw"
+set_dir = Path.home() / "Documents" / "quizbowl" / "oligo" / "tournaments" / "untitled-film-set" / "packets"
+
+# Begin processing
 
 split_docs = False # Should the answerline documents be split?
 if split_docs: # TODO
@@ -102,13 +112,13 @@ else:
     ans_tmpl = docx.Document()
     ans_docx = (db_dir / f"{set_slug}_Answers-raw.docx") # Output: ans_raw document (docx)
     ans_md = (db_dir / f"{set_slug}_Answers-raw.md") # Output: ans_raw document (md)
-    ans_txt = (db_dir / f"{set_slug}_Answers-raw.txt") # Output: ans_raw document (md)
+    ans_txt = (db_dir / f"{set_slug}_Answers-raw.txt") # Output: ans_raw document (txt)
 
-pack_names = list(ans_db["Packet"].unique())
-n_pack = len(pack_names)
-packets = n_pack*[None]
-answers = n_pack*[ans_db["Number"].max()*[None]]
-slides = n_pack*[ans_db["Number"].max()*[[None]]]
+packet_names = list(ans_db["Packet"].unique())
+n_packet = len(packet_names)
+packets = n_packet*[None]
+answers = n_packet*[ans_db["Number"].max()*[None]]
+slides = n_packet*[ans_db["Number"].max()*[[None]]]
 
 style_doc(ans_tmpl)
 
@@ -116,46 +126,45 @@ style_doc(ans_tmpl)
 for col in ["Answerline", "Source", "Director", "Notes"]:
     ans_db[col] = ans_db[col].apply(lambda s: make_curly(s) if pd.notnull(s) else s)
 
-# Is the set a hybrid visual-written tournament?
-hybrid = True
-raw_string = "W" # "_raw"
-set_dir = Path.home() / "Documents" / "quizbowl" / "oligo" / "tournaments" / "untitled-film-set" / "packets"
-n_written = 10
-
+# Prepare the hybrid packet generation, if configured
 make_hybrid = False
 if hybrid and set_dir.exists():
-    set_packs = sorted(set_dir.glob(f"**/*{raw_string}.docx"))
-    if len(list(set_packs)) == n_pack:
+    written_packets = sorted(set_dir.glob(f"**/*{raw_string}.docx"))
+    if len(list(written_packets)) == n_packet:
         make_hybrid = True
-        hybrid_packets = n_pack*[None]
-        hybrid_answers = n_pack*[ans_db["Number"].max()*[None]]
+        hybrid_packets = n_packet*[None]
+        hybrid_answers = n_packet*[ans_db["Number"].max()*[None]]
     else:
         print("Number of placeholder packets doesn't match the number of written packets.")
 
 ans_tmpl.add_heading(f"{set_name} - Visual Answerlines", level=0)
-for i in range(n_pack): # Loop over packets
-    if i > 0:
+for i in range(n_packet): # Loop over packets
+    if not split_docs and (i > 0):
         ans_tmpl.add_page_break()
-    pack_raw = f"Packet {pack_names[i]}"
-    packets[i] = ans_tmpl.add_heading(pack_raw, level=1)
+    packet_header = f"Packet {packet_names[i]}"
+    packets[i] = ans_tmpl.add_heading(packet_header, level=1)
 
     if verbose:
-        print(pack_raw)
+        print(packet_header)
 
     # Filter just the current packet
-    pack_db = ans_db[ans_db["Packet"] == pack_names[i]]
+    packet_db = ans_db[ans_db["Packet"] == packet_names[i]]
 
-    # If hybrid, make the current packet
+    # If hybrid, make the current hybrid packet by appending to the corresponding written packet
     if make_hybrid:
-        hybrid_packets[i] = set_packs[i].parent / f"{set_slug}_{pack_names[i].zfill(2)}.docx"
+        hybrid_packets[i] = written_packets[i].parent / f"{set_slug}_{packet_names[i].zfill(2)}.docx"
         if hybrid_packets[i].exists():
             hybrid_packets[i].unlink()
-        Path.copy(set_packs[i], hybrid_packets[i])
+        Path.copy(written_packets[i], hybrid_packets[i])
         hyb_tmpl = docx.Document(hybrid_packets[i])
+        # Calculate the number of already-written questions in the packet
+        # This compiles all the numbers in the document that are succeeded by a period, then takes the maximum
+        # https://stackoverflow.com/questions/952914/how-do-i-make-a-flat-list-out-of-a-list-of-lists#comment123215183_952952
+        n_written = max([int(s) for s in [leaf for tree in [findall("(^\d+)\.+", s) for s in [p.text for p in hyb_tmpl.paragraphs]] for leaf in tree if leaf]])
 
-    for j in range(pack_db["Number"].max()): # Loop over questions
+    for j in range(packet_db["Number"].max()): # Loop over questions
         # Filter just the current question
-        q_db = pack_db[pack_db["Number"] == (j + 1)]
+        q_db = packet_db[packet_db["Number"] == (j + 1)]
         n_slide = q_db.shape[0]
 
         # Only process if the answerline is not empty
