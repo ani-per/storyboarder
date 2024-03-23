@@ -156,6 +156,7 @@ for i in range(n_pack): # Loop over packets
     for j in range(pack_db["Number"].max()): # Loop over questions
         # Filter just the current question
         q_db = pack_db[pack_db["Number"] == (j + 1)]
+        n_slide = q_db.shape[0]
 
         # Only process if the answerline is not empty
         if pd.notnull(q_db.iloc[0]["Answerline"]):
@@ -168,7 +169,26 @@ for i in range(n_pack): # Loop over packets
 
             # If hybrid, make the placeholder question
             hyb_tmpl.add_paragraph("")
-            hyb_tmpl.add_paragraph(f"{j + n_written + 1}. ")
+            slide_q = hyb_tmpl.add_paragraph(f"{j + n_written + 1}. ")
+            slide_runs = n_slide*[None]
+            for k in range(n_slide): # Loop over slides
+                slide_runs[k] = slide_q.add_run(f"{k + 1}" + f" "*(k < (n_slide - 1)))
+                if k < (n_slide - 1):
+                    if q_db.iloc[k]["Value"] == 20:
+                        slide_runs[k].bold = True
+                        slide_runs[k].underline = True
+                        if q_db.iloc[k + 1]["Value"] < 20:
+                            superpower_mark = slide_q.add_run(f"(+)")
+                            superpower_mark.bold = True
+                            superpower_mark.underline = True
+                            slide_q.add_run(f" ")
+                    elif q_db.iloc[k]["Value"] == 15:
+                        slide_runs[k].bold = True
+                        if q_db.iloc[k + 1]["Value"] < 15:
+                            power_mark = slide_q.add_run(f"(*)")
+                            power_mark.bold = True
+                            slide_q.add_run(f" ")
+
             hybrid_answers[i][j] = hyb_tmpl.add_paragraph("ANSWER: ")
             if make_hybrid:
                 write_answerline(hybrid_answers[i][j], q_db.iloc[0]["Answerline"], q_db.iloc[0]["Type"])
@@ -190,7 +210,6 @@ for i in range(n_pack): # Loop over packets
 
             # Prepare the slide annotations, if it's not a film
             if q_db.iloc[0]["Type"] != "Film":
-                n_slide = q_db.shape[0]
                 slides[i][j] = n_slide*[None]
                 for k in range(n_slide): # Loop over slides
                     # Add an annotation if there's a source listed for the current slide
