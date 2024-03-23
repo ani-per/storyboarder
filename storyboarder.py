@@ -104,10 +104,11 @@ def storyboard(
     set_name: str,
     db_dir: Path,
     db_path: Path,
-    hybrid: bool = True,
+    hybrid: bool = False,
     raw_string: str = "_raw",
     set_dir: Path = None,
     split_docs: bool = False,
+    tags: bool = True,
     verbose: bool = False
 ):
     """Create the visual answerline document, and hybrid packets along the way if desired.
@@ -120,6 +121,7 @@ def storyboard(
         raw_string (str, optional): Suffix to identify the written packets. Defaults to "_raw".
         set_dir (Path, optional): Directory where the written packets are stored (and where the hybrid packets will be generated). Defaults to None.
         split_docs (bool, optional): Should the answerline documents be split? Defaults to False.
+        tags (bool, optional): Should the hybrid packets have author tags for the visual questions? Defaults to False.
         verbose (bool, optional): Print progress. Defaults to False.
     """
 
@@ -269,7 +271,7 @@ def storyboard(
                             list_number(templates[i], slides[i][j][k], prev=slides[i][j][k - 1])
 
                 # If hybrid, write the author tag
-                if make_hybrid:
+                if make_hybrid and tags:
                     if pd.notna(q_db.iloc[0]["Author"]):
                         hybrid_docx.add_paragraph(f"<{q_db.iloc[0]['Author']}, Visual>")
                     else:
