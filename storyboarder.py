@@ -109,7 +109,8 @@ def storyboard(
     set_dir: Path = None,
     split_docs: bool = False,
     tags: bool = True,
-    verbose: bool = False
+    verbose: bool = False,
+    try_open: bool = False,
 ):
     """Create the visual answerline document, and hybrid packets along the way if desired.
 
@@ -118,7 +119,7 @@ def storyboard(
         db_dir (Path): Directory where the answerline database CSV is stored (and where the visual answerline document will be generated)
         db_path (Path): Filepath of the answerline database CSV
         hybrid (bool, optional): Is the set a hybrid visual-written tournament? Defaults to True.
-        raw_string (str, optional): Suffix to identify the written packets. Defaults to "_raw".
+        raw_string (str, optional): Suffix to identify the written packets. All written packets must end with this prefix for Storyboarder to identify them. Defaults to "_raw".
         set_dir (Path, optional): Directory where the written packets are stored (and where the hybrid packets will be generated). Defaults to None.
         split_docs (bool, optional): Should the answerline documents be split? Defaults to False.
         tags (bool, optional): Should the hybrid packets have author tags for the visual questions? Defaults to False.
@@ -157,9 +158,9 @@ def storyboard(
         ans_db[col] = ans_db[col].apply(lambda s: make_curly(s) if pd.notna(s) else s)
 
     # Prepare the hybrid packet generation, if configured
-    make_hybrid = True
+    make_hybrid = False
     if hybrid and set_dir.exists():
-        written_packets = sorted(set_dir.glob(f"**/*{raw_string}.docx"))
+        written_packets = sorted(set_dir.glob(f"**/[!~]?*{raw_string}.docx"))
         if len(list(written_packets)) == n_packet:
             make_hybrid = True
             hybrid_packets = n_packet*[None]
@@ -192,7 +193,11 @@ def storyboard(
             # Calculate the number of already-written questions in the packet
             # This compiles all the numbers in the document that are succeeded by a period, then takes the maximum
             # https://stackoverflow.com/questions/952914/how-do-i-make-a-flat-list-out-of-a-list-of-lists#comment123215183_952952
-            n_written = max([int(s) for s in [leaf for tree in [findall("(^\d+)\.+", s) for s in [p.text for p in hybrid_docx.paragraphs]] for leaf in tree if leaf]])
+            detect_written = [int(s) for s in [leaf for tree in [findall("(^\d+)\.+", s) for s in [p.text for p in hybrid_docx.paragraphs]] for leaf in tree if leaf]]
+            if len(detect_written) > 0:
+                n_written = max(detect_written)
+            else:
+                n_written = 0
 
         for j in range(packet_db["Number"].max()): # Loop over questions
             # Filter the database to the current question
@@ -318,7 +323,7 @@ def storyboard(
         # Write the document
         templates[i].save(documents[i])
 
-    if not split_docs:
+    if not split_docs and try_open:
         # https://stackoverflow.com/a/435669
         if system() == "Darwin": # MacOS
             call(("open", documents[0]))

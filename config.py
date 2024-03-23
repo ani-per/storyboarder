@@ -9,9 +9,7 @@ storyboard(
     db_dir,
     db_path,
     hybrid=True, # Is the set a hybrid visual-written tournament?
-    raw_string="W", # The suffix to identify the written packets
+    raw_string="W", # The suffix to identify the written packets. All written packets must end with this prefix for Storyboarder to identify them.
     set_dir=Path.home() / "Documents" / "quizbowl" / "oligo" / "tournaments" / "untitled-film-set" / "packets", # The directory where the written packets are stored (and where the hybrid packets will be generated)
-    split_docs=False, # Should the answerline documents be split?
-    tags=True, # Should the hybrid packets have author tags for the visual questions?
     verbose=True # Print progress
 )
