@@ -152,7 +152,7 @@ def storyboard(
 
     # Use curly quotes
     for col in ["Answerline", "Source", "Director", "Notes"]:
-        ans_db[col] = ans_db[col].apply(lambda s: make_curly(s) if pd.notnull(s) else s)
+        ans_db[col] = ans_db[col].apply(lambda s: make_curly(s) if pd.notna(s) else s)
 
     # Prepare the hybrid packet generation, if configured
     make_hybrid = True
@@ -198,7 +198,7 @@ def storyboard(
             n_slide = q_db.shape[0]
 
             # Only process if the answerline is not empty
-            if pd.notnull(q_db.iloc[0]["Answerline"]):
+            if pd.notna(q_db.iloc[0]["Answerline"]):
                 # Write the answerline
                 answers[i][j] = templates[i].add_paragraph("", style="List Number")
                 write_answerline(answers[i][j], q_db.iloc[0]["Answerline"], q_db.iloc[0]["Type"])
@@ -253,10 +253,10 @@ def storyboard(
                             src_run.italic = True
 
                         # If the question's not a Director, add the director credit for the source of the current slide
-                        if (q_db.iloc[0]["Type"] != "Director") or (q_db.iloc[0]["Type"] == "Director" and not pd.isna(q_db.iloc[k]["Director"])):
-                            if (k > 0) and (pd.isna(q_db.iloc[k]["Director"])) and not (pd.isna(q_db.iloc[0]["Director"])):
+                        if (q_db.iloc[0]["Type"] != "Director") or (q_db.iloc[0]["Type"] == "Director" and pd.notna(q_db.iloc[k]["Director"])):
+                            if (k > 0) and (pd.isna(q_db.iloc[k]["Director"])) and (pd.notna(q_db.iloc[0]["Director"])):
                                 dir_raw = f" (dir. {q_db.iloc[0]['Director']})"
-                            elif not (pd.isna(q_db.iloc[k]["Director"])):
+                            elif (pd.notna(q_db.iloc[k]["Director"])):
                                 dir_raw = f" (dir. {q_db.iloc[k]['Director']})"
                             else:
                                 dir_raw = ""
@@ -268,8 +268,15 @@ def storyboard(
                         else:
                             list_number(templates[i], slides[i][j][k], prev=slides[i][j][k - 1])
 
+                # If hybrid, write the author tag
+                if make_hybrid:
+                    if pd.notna(q_db.iloc[0]["Author"]):
+                        hybrid_docx.add_paragraph(f"<{q_db.iloc[0]['Author']}, Visual>")
+                    else:
+                        hybrid_docx.add_paragraph(f"<, Visual>")
+
                 # If there are notes, write them
-                if not pd.isna(q_db.iloc[0]["Notes"]):
+                if pd.notna(q_db.iloc[0]["Notes"]):
                     notes_raw = f" ({q_db.iloc[0]['Notes']})"
                     answers[i][j].add_run(notes_raw)
 
