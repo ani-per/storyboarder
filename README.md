@@ -1,6 +1,6 @@
 # Storyboarder
 
-**Storyboarder** is a visual set writing assistant.
+**Storyboarder** is a visual set writing assistant. The primary intention is to handle film sets, but an auxiliary goal is to handle sets sourced from other areas (art, photography, etc.) as well.
 
 It automatically creates:
 
@@ -44,6 +44,7 @@ It consists of:
 4. You should now have:
    * A roughly-formatted visual answerline document that contains both answerlines and slide-by-slide information for each visual question.
    * If configured, a set of hybrid packets that contain both written and visual questions for convenient use by moderators using [Oligodendrocytes](https://github.com/hftf/oligodendrocytes).
+5. If you need to edit either the database or the written packets and run again, make sure all Storyboarder-generated documents (visual answerlines document, hybrid packets) are closed at the time of running, because `python-docx` will throw an error when creating/editing/deleting those files.
 
 > [!IMPORTANT]
 > The hybrid packets are generated to interface with [Oligodendrocytes](https://github.com/hftf/oligodendrocytes). They have not been tested with [MODAQ](https://github.com/alopezlago/MODAQ), although the anticipation is that they will function properly.
