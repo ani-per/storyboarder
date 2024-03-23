@@ -1,11 +1,11 @@
 # Storyboarder
 
-**Storyboarder** is a visual set writing assistant. The primary intention is to handle film sets, but an auxiliary goal is to handle sets sourced from other areas (art, photography, etc.) as well.
+**Storyboarder** is an assistant for writing visual quizbowl sets. Storyboarder can handle sets/packets that are **fully visual** (e.g. Eyes That Do Not See) or **hybrid written + visual** (e.g. Untitled Film Set). The primary intention is to handle film sets, but an auxiliary goal is to handle sets sourced from other areas (art, photography, etc.) as well.
 
 It automatically creates:
 
 * A roughly-formatted visual answerline document that contains both answerlines and slide-by-slide information for each visual question.
-* If `hybrid` is configured, a set of hybrid packets that contain both written and visual questions for convenient use by moderators using [Oligodendrocytes](https://github.com/hftf/oligodendrocytes).
+* If `hybrid` is configured, a set of hybrid packets that contain any combination of written and visual questions, for convenient use by moderators using [Oligodendrocytes](https://github.com/hftf/oligodendrocytes).
 
 It requires:
 
@@ -40,11 +40,14 @@ It consists of:
      * `Figure`
      * `Crew`
    * To reference a music video in a slide rather than a film, put the name of the music video in quotation marks in the corresponding `Source` cell for that slide.
-3. Configure and run `config.py`.
+3. Configure the parameters in `config.py` and run `config.py`.
 4. You should now have:
    * A roughly-formatted visual answerline document that contains both answerlines and slide-by-slide information for each visual question.
    * If configured, a set of hybrid packets that contain both written and visual questions for convenient use by moderators using [Oligodendrocytes](https://github.com/hftf/oligodendrocytes).
 5. If you need to edit either the database or the written packets and run again, make sure all Storyboarder-generated documents (visual answerlines document, hybrid packets) are closed at the time of running, because `python-docx` will throw an error when creating/editing/deleting those files.
+
+> [!IMPORTANT]
+> Storyboarder can handle fully-visual tournaments. Just configure `hybrid = True` and create a set of empty packet files in `set_dir` to act as the "written" files.
 
 > [!IMPORTANT]
 > The hybrid packets are generated to interface with [Oligodendrocytes](https://github.com/hftf/oligodendrocytes). They have not been tested with [MODAQ](https://github.com/alopezlago/MODAQ), although the anticipation is that they will function properly.
