@@ -237,7 +237,7 @@ def storyboard(
                 if q_db.iloc[0]["Type"] == "Film": # If it's a film, write the director in the answerline
                     dir_raw = f" (dir. {q_db.iloc[0]['Director']})"
                     answers[i][j].add_run(dir_raw)
-                    if (make_hybrid):
+                    if make_hybrid:
                         hybrid_answers[i][j].add_run(dir_raw)
                 else: # Prepare the slide annotations, if it's not a film
                     slides[i][j] = n_slide*[None]
@@ -269,6 +269,29 @@ def storyboard(
                             list_number(templates[i], slides[i][j][k], prev=None, level=0)
                         else:
                             list_number(templates[i], slides[i][j][k], prev=slides[i][j][k - 1])
+
+                    # If hybrid, write the films clued in the visual question as a note
+                    if make_hybrid:
+                        hybrid_answers[i][j].add_run(" (Films clued: ")
+                        if q_db.iloc[0]["Type"] == "Director":
+                            films = q_db["Source"][q_db["Source"].notnull()].unique()
+                            for k in range(len(films)): # Loop over films
+                                if k > 0:
+                                    hybrid_answers[i][j].add_run("; ")
+                                hybrid_answers[i][j].add_run(films[k]).italic = True
+                        else:
+                            # https://stackoverflow.com/a/67883591
+                            films_dirs = q_db[["Director", "Source"]][q_db[["Source", "Director"]].notnull()].value_counts(sort=False).reset_index(name="count")
+                            for k in range(len(films_dirs)): # Loop over films
+                                if k > 0:
+                                    hybrid_answers[i][j].add_run("; ")
+                                if films_dirs["Source"][k].startswith(("\'", "\"", "‘", "“")): # Don't italicize if title's in quotes (e.g. music video)
+                                    hybrid_answers[i][j].add_run(films_dirs["Source"][k])
+                                else:
+                                    hybrid_answers[i][j].add_run(films_dirs["Source"][k]).italic = True
+                                hybrid_answers[i][j].add_run(", dir. ")
+                                hybrid_answers[i][j].add_run(films_dirs["Director"][k])
+                        hybrid_answers[i][j].add_run(")")
 
                 # If hybrid, write the author tag
                 if make_hybrid and tags:
