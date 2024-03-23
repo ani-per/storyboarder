@@ -24,7 +24,8 @@ def make_curly(str):
 
 def write_answerline(ans_par, ans_raw, ans_type):
     ans_split = ans_raw.split(" [")
-    main_ans = ans_split[0]
+    main_ans_split = ans_split[0].split(" (")
+    main_ans = main_ans_split[0]
 
     # Style the main answerline first
     if ans_type in ["Director", "Crew", "Figure"]:
@@ -45,9 +46,14 @@ def write_answerline(ans_par, ans_raw, ans_type):
     if ans_type == "Film":
         main_run.italic = True
 
+    # Style the pronunciation guide if it exists
+    if len(main_ans_split) > 1:
+        pg_ans = f" ({main_ans_split[1]}"
+        ans_par.add_run(pg_ans)
+
+    # Style the alt answerlines if they exist
     if len(ans_split) > 1:
-        # Style the alt answerlines if they exist
-        alt_ans = search(r'\[(.*?)\]', "[" + ans_split[1]).group(1).split("; ")
+        alt_ans = search("\[(.*?)\]", "[" + ans_split[1]).group(1).split("; ")
         n_alt_ans = len(alt_ans)
         alt_ans_runs = n_alt_ans*[None]
         for i in range(n_alt_ans):
