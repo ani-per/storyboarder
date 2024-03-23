@@ -49,7 +49,7 @@ It consists of:
 > The hybrid packets are generated to interface with [Oligodendrocytes](https://github.com/hftf/oligodendrocytes). They have not been tested with [MODAQ](https://github.com/alopezlago/MODAQ), although the anticipation is that they will function properly.
 
 > [!WARNING]
-> Storyboarder performs a first run of formatting on each answerline. However, you should now go through each answerline and format it as per style guides, as there will likely be errors. Hence, it is recommended to make sure that the answerlines for the written portion of a hybrid set
+> Storyboarder performs a first run of formatting on each answerline. However, once Storyboarder has been run, you should go through each visual answerline and format it as per [style guides](https://minkowski.space/quizbowl/manuals/style/), as there will likely be errors. Hence, it is recommended (but not required) to make sure that the answerlines for the written portion of a hybrid set are verified and proofreaded before running Storyboarder.
 
 ## History
 
