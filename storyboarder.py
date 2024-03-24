@@ -1,31 +1,42 @@
 from pathlib import Path  # Filepaths
-import typing # Argument / output type checking
-import pandas as pd # DataFrames
-import docx as docx # Word documents - https://github.com/python-openxml/python-docx
-from haggis.files.docx import list_number # Misc Word document utils - https://gitlab.com/madphysicist/haggis
+import typing  # Argument / output type checking
+import pandas as pd  # DataFrames
+import docx as docx  # Word documents - https://github.com/python-openxml/python-docx
+from haggis.files.docx import (
+    list_number,
+)  # Misc Word document utils - https://gitlab.com/madphysicist/haggis
 from re import sub, search, findall
 
 from subprocess import call
 from platform import system
-from os import startfile
+
 
 # https://stackoverflow.com/a/40319071
 def _copy(self, target):
     from shutil import copy as sh_copy
+
     assert self.is_file()
     sh_copy(str(self), str(target))
 
+
 Path.copy = _copy
+
 
 # https://stackoverflow.com/a/38234962
 def make_curly(str: str) -> str:
-    return sub(r"(\s|^)\'(.*?)\'(\s|$)", r"\1‘\2’\3", sub(r"\"(.*?)\"", r"“\1”", str)).replace("\'", "’")
+    return sub(
+        r"(\s|^)\'(.*?)\'(\s|$)", r"\1‘\2’\3", sub(r"\"(.*?)\"", r"“\1”", str)
+    ).replace("'", "’")
+
 
 def style_doc(tmpl):
     # tmpl.styles["Heading 1"].font = ""
     pass
 
-def write_answerline(ans_par: docx.text.paragraph.Paragraph, ans_raw: str, ans_type: str):
+
+def write_answerline(
+    ans_par: docx.text.paragraph.Paragraph, ans_raw: str, ans_type: str
+):
     """Write the database answerline to a given paragraph in a document.
 
     Args:
@@ -41,7 +52,7 @@ def write_answerline(ans_par: docx.text.paragraph.Paragraph, ans_raw: str, ans_t
     if ans_type in ["Director", "Crew", "Figure"]:
         main_names = main_ans.split(" ")
         n_main_names = len(main_names)
-        main_runs = n_main_names*[None]
+        main_runs = n_main_names * [None]
         for i in range(n_main_names):
             main_runs[i] = ans_par.add_run(main_names[i])
             if i == (n_main_names - 1):
@@ -65,7 +76,7 @@ def write_answerline(ans_par: docx.text.paragraph.Paragraph, ans_raw: str, ans_t
     if len(ans_split) > 1:
         alt_ans = search("\[(.*?)\]", "[" + ans_split[1]).group(1).split("; ")
         n_alt_ans = len(alt_ans)
-        alt_ans_runs = n_alt_ans*[None]
+        alt_ans_runs = n_alt_ans * [None]
         for i in range(n_alt_ans):
             for directive in ["or ", "accept ", "prompt on ", "reject "]:
                 if alt_ans[i].startswith(directive):
@@ -75,7 +86,7 @@ def write_answerline(ans_par: docx.text.paragraph.Paragraph, ans_raw: str, ans_t
                     if ans_type in ["Director", "Crew", "Figure"]:
                         alt_names = alt_ans[i].split(directive)[-1].split(" ")
                         n_alt_names = len(alt_names)
-                        alt_name_runs = n_alt_names*[None]
+                        alt_name_runs = n_alt_names * [None]
                         for j in range(n_alt_names):
                             alt_name_runs[j] = ans_par.add_run(alt_names[j])
                             if j == (n_alt_names - 1):
@@ -88,7 +99,9 @@ def write_answerline(ans_par: docx.text.paragraph.Paragraph, ans_raw: str, ans_t
                             else:
                                 ans_par.add_run(" ")
                     else:
-                        alt_ans_runs[i] = ans_par.add_run(alt_ans[i].split(directive)[-1])
+                        alt_ans_runs[i] = ans_par.add_run(
+                            alt_ans[i].split(directive)[-1]
+                        )
                         if not directive.startswith("reject"):
                             alt_ans_runs[i].underline = True
                             if not directive.startswith("prompt"):
@@ -99,6 +112,7 @@ def write_answerline(ans_par: docx.text.paragraph.Paragraph, ans_raw: str, ans_t
                         ans_par.add_run("]")
                     else:
                         ans_par.add_run("; ")
+
 
 def storyboard(
     set_name: str,
@@ -136,19 +150,21 @@ def storyboard(
     packet_names = list(ans_db["Packet"].unique())
     n_packet = len(packet_names)
 
-    templates = n_packet*[None]
-    documents = n_packet*[None]
-    packets = n_packet*[None]
-    answers = n_packet*[ans_db["Number"].max()*[None]]
-    slides = n_packet*[ans_db["Number"].max()*[[None]]]
+    templates = n_packet * [None]
+    documents = n_packet * [None]
+    packets = n_packet * [None]
+    answers = n_packet * [ans_db["Number"].max() * [None]]
+    slides = n_packet * [ans_db["Number"].max() * [[None]]]
 
     for i in range(n_packet):
         if split_docs or (not split_docs and (i == 0)):
             templates[i] = docx.Document()
             if split_docs:
-                documents[i] = (db_dir / f"{set_slug}_Answers-raw_{packet_names[i].zfill(2)}.docx")
+                documents[i] = (
+                    db_dir / f"{set_slug}_Answers-raw_{packet_names[i].zfill(2)}.docx"
+                )
             elif not split_docs and (i == 0):
-                documents[i] = (db_dir / f"{set_slug}_Answers-raw.docx")
+                documents[i] = db_dir / f"{set_slug}_Answers-raw.docx"
         elif (not split_docs) and (i > 0):
             templates[i] = templates[0]
             documents[i] = documents[0]
@@ -163,12 +179,14 @@ def storyboard(
         written_packets = sorted(set_dir.glob(f"**/[!~]?*{raw_string}.docx"))
         if len(list(written_packets)) == n_packet:
             make_hybrid = True
-            hybrid_packets = n_packet*[None]
-            hybrid_answers = n_packet*[ans_db["Number"].max()*[None]]
+            hybrid_packets = n_packet * [None]
+            hybrid_answers = n_packet * [ans_db["Number"].max() * [None]]
         else:
-            print("Number of placeholder packets doesn't match the number of written packets.")
+            print(
+                "Number of placeholder packets doesn't match the number of written packets."
+            )
 
-    for i in range(n_packet): # Loop over packets
+    for i in range(n_packet):  # Loop over packets
         style_doc(templates[i])
         if (split_docs) or ((not split_docs) and (i == 0)):
             templates[i].add_heading(f"{set_name} - Visual Answerlines", level=0)
@@ -185,7 +203,10 @@ def storyboard(
 
         # If hybrid, make the current hybrid packet by appending to the corresponding written packet
         if make_hybrid:
-            hybrid_packets[i] = written_packets[i].parent / f"{set_slug}_{packet_names[i].zfill(2)}.docx"
+            hybrid_packets[i] = (
+                written_packets[i].parent
+                / f"{set_slug}_{packet_names[i].zfill(2)}.docx"
+            )
             if hybrid_packets[i].exists():
                 hybrid_packets[i].unlink()
             Path.copy(written_packets[i], hybrid_packets[i])
@@ -193,13 +214,24 @@ def storyboard(
             # Calculate the number of already-written questions in the packet
             # This compiles all the numbers in the document that are succeeded by a period, then takes the maximum
             # https://stackoverflow.com/questions/952914/how-do-i-make-a-flat-list-out-of-a-list-of-lists#comment123215183_952952
-            detect_written = [int(s) for s in [leaf for tree in [findall("(^\d+)\.+", s) for s in [p.text for p in hybrid_docx.paragraphs]] for leaf in tree if leaf]]
+            detect_written = [
+                int(s)
+                for s in [
+                    leaf
+                    for tree in [
+                        findall("(^\d+)\.+", s)
+                        for s in [p.text for p in hybrid_docx.paragraphs]
+                    ]
+                    for leaf in tree
+                    if leaf
+                ]
+            ]
             if len(detect_written) > 0:
                 n_written = max(detect_written)
             else:
                 n_written = 0
 
-        for j in range(packet_db["Number"].max()): # Loop over questions
+        for j in range(packet_db["Number"].max()):  # Loop over questions
             # Filter the database to the current question
             q_db = packet_db[packet_db["Number"] == (j + 1)]
             n_slide = q_db.shape[0]
@@ -208,7 +240,9 @@ def storyboard(
             if pd.notna(q_db.iloc[0]["Answerline"]):
                 # Write the answerline
                 answers[i][j] = templates[i].add_paragraph("", style="List Number")
-                write_answerline(answers[i][j], q_db.iloc[0]["Answerline"], q_db.iloc[0]["Type"])
+                write_answerline(
+                    answers[i][j], q_db.iloc[0]["Answerline"], q_db.iloc[0]["Type"]
+                )
 
                 if verbose:
                     print(f"{j + 1}: " + q_db.iloc[0]["Answerline"])
@@ -217,9 +251,11 @@ def storyboard(
                 if make_hybrid:
                     hybrid_docx.add_paragraph("")
                     slide_q = hybrid_docx.add_paragraph(f"{j + n_written + 1}. ")
-                    slide_runs = n_slide*[None]
-                    for k in range(n_slide): # Loop over slides
-                        slide_runs[k] = slide_q.add_run(f"{k + 1}" + f" "*(k < (n_slide - 1)))
+                    slide_runs = n_slide * [None]
+                    for k in range(n_slide):  # Loop over slides
+                        slide_runs[k] = slide_q.add_run(
+                            f"{k + 1}" + f" " * (k < (n_slide - 1))
+                        )
                         if k < (n_slide - 1):
                             if q_db.iloc[k]["Value"] == 20:
                                 slide_runs[k].bold = True
@@ -237,16 +273,22 @@ def storyboard(
                                     slide_q.add_run(f" ")
 
                     hybrid_answers[i][j] = hybrid_docx.add_paragraph("ANSWER: ")
-                    write_answerline(hybrid_answers[i][j], q_db.iloc[0]["Answerline"], q_db.iloc[0]["Type"])
+                    write_answerline(
+                        hybrid_answers[i][j],
+                        q_db.iloc[0]["Answerline"],
+                        q_db.iloc[0]["Type"],
+                    )
 
-                if q_db.iloc[0]["Type"] == "Film": # If it's a film, write the director in the answerline
+                if (
+                    q_db.iloc[0]["Type"] == "Film"
+                ):  # If it's a film, write the director in the answerline
                     dir_raw = f" (dir. {q_db.iloc[0]['Director']})"
                     answers[i][j].add_run(dir_raw)
                     if make_hybrid:
                         hybrid_answers[i][j].add_run(dir_raw)
-                else: # Prepare the slide annotations, if it's not a film
-                    slides[i][j] = n_slide*[None]
-                    for k in range(n_slide): # Loop over slides
+                else:  # Prepare the slide annotations, if it's not a film
+                    slides[i][j] = n_slide * [None]
+                    for k in range(n_slide):  # Loop over slides
                         # Add an annotation if there's a source listed for the current slide
                         if pd.isna(q_db.iloc[k]["Source"]):
                             src_raw = ""
@@ -254,16 +296,27 @@ def storyboard(
                             src_raw = q_db.iloc[k]["Source"]
 
                         # Write the slide annotation
-                        slides[i][j][k] = templates[i].add_paragraph("", style="List Number 2")
+                        slides[i][j][k] = templates[i].add_paragraph(
+                            "", style="List Number 2"
+                        )
                         src_run = slides[i][j][k].add_run(src_raw)
-                        if (len(src_raw) > 0) and not (q_db.iloc[k]["Source"].startswith(("\'", "\"", "‘", "“"))): # Don't italicize if title's in quotes (e.g. music video)
+                        if (len(src_raw) > 0) and not (
+                            q_db.iloc[k]["Source"].startswith(("'", '"', "‘", "“"))
+                        ):  # Don't italicize if title's in quotes (e.g. music video)
                             src_run.italic = True
 
                         # If the question's not a Director, add the director credit for the source of the current slide
-                        if (q_db.iloc[0]["Type"] != "Director") or (q_db.iloc[0]["Type"] == "Director" and pd.notna(q_db.iloc[k]["Director"])):
-                            if (k > 0) and (pd.isna(q_db.iloc[k]["Director"])) and (pd.notna(q_db.iloc[0]["Director"])):
+                        if (q_db.iloc[0]["Type"] != "Director") or (
+                            q_db.iloc[0]["Type"] == "Director"
+                            and pd.notna(q_db.iloc[k]["Director"])
+                        ):
+                            if (
+                                (k > 0)
+                                and (pd.isna(q_db.iloc[k]["Director"]))
+                                and (pd.notna(q_db.iloc[0]["Director"]))
+                            ):
                                 dir_raw = f" (dir. {q_db.iloc[0]['Director']})"
-                            elif (pd.notna(q_db.iloc[k]["Director"])):
+                            elif pd.notna(q_db.iloc[k]["Director"]):
                                 dir_raw = f" (dir. {q_db.iloc[k]['Director']})"
                             else:
                                 dir_raw = ""
@@ -271,32 +324,44 @@ def storyboard(
 
                         # Format the annotation as a list element
                         if k == 0:
-                            list_number(templates[i], slides[i][j][k], prev=None, level=0)
+                            list_number(
+                                templates[i], slides[i][j][k], prev=None, level=0
+                            )
                         else:
-                            list_number(templates[i], slides[i][j][k], prev=slides[i][j][k - 1])
+                            list_number(
+                                templates[i], slides[i][j][k], prev=slides[i][j][k - 1]
+                            )
 
                     # If hybrid, write the sources in the visual question as a note
                     if make_hybrid:
                         hybrid_answers[i][j].add_run(" (Sources: ")
                         if q_db.iloc[0]["Type"] == "Director":
                             films = q_db["Source"][q_db["Source"].notnull()].unique()
-                            for k in range(len(films)): # Loop over films
+                            for k in range(len(films)):  # Loop over films
                                 if k > 0:
                                     hybrid_answers[i][j].add_run("; ")
                                 hybrid_answers[i][j].add_run(films[k]).italic = True
                         else:
                             dirs = q_db["Director"][q_db["Director"].notnull()].unique()
-                            for k in range(len(dirs)): # Loop over films
-                                srcs_dir = q_db[q_db["Director"] == dirs[k]]["Source"].unique()
+                            for k in range(len(dirs)):  # Loop over films
+                                srcs_dir = q_db[q_db["Director"] == dirs[k]][
+                                    "Source"
+                                ].unique()
                                 if k > 0:
                                     hybrid_answers[i][j].add_run("; ")
                                 for l in range(len(srcs_dir)):
                                     if l > 0:
                                         hybrid_answers[i][j].add_run(", ")
-                                    if srcs_dir[l].startswith(("\'", "\"", "‘", "“")): # Don't italicize if title's in quotes (e.g. music video)
+                                    if srcs_dir[
+                                        l
+                                    ].startswith(
+                                        ("'", '"', "‘", "“")
+                                    ):  # Don't italicize if title's in quotes (e.g. music video)
                                         hybrid_answers[i][j].add_run(srcs_dir[l])
                                     else:
-                                        hybrid_answers[i][j].add_run(srcs_dir[l]).italic = True
+                                        hybrid_answers[i][j].add_run(
+                                            srcs_dir[l]
+                                        ).italic = True
                                 hybrid_answers[i][j].add_run(" - dir. ")
                                 hybrid_answers[i][j].add_run(dirs[k])
                         hybrid_answers[i][j].add_run(")")
@@ -325,9 +390,11 @@ def storyboard(
 
     if not split_docs and try_open:
         # https://stackoverflow.com/a/435669
-        if system() == "Darwin": # MacOS
+        if system() == "Darwin":  # MacOS
             call(("open", documents[0]))
-        elif system() == "Windows": # Windows
+        elif system() == "Windows":  # Windows
+            from os import startfile
+
             startfile(documents[0])
-        else: # Linux variants
+        else:  # Linux variants
             call(("xdg-open", documents[0]))
