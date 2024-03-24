@@ -8,7 +8,7 @@ It automatically creates:
 * If `hybrid` is configured, a set of hybrid packets that contain any combination of written and visual questions, for convenient use by moderators using [Oligodendrocytes](https://github.com/hftf/oligodendrocytes) or [MODAQ](https://github.com/alopezlago/MODAQ).
 
 > [!IMPORTANT]
-> The hybrid packet generation is compatible with both [Oligodendrocytes](https://github.com/hftf/oligodendrocytes) and [MODAQ](https://github.com/alopezlago/MODAQ). Although the process was originally designed to interface with Oligodendrocytes, based on preliminary testing, they also function properly with MODAQ.
+> The hybrid packet generation is compatible with both [Oligodendrocytes](https://github.com/hftf/oligodendrocytes) and [MODAQ](https://github.com/alopezlago/MODAQ) (which also uses [YAPP](https://github.com/alopezlago/YetAnotherPacketParser)). Although the process was originally designed to interface with Oligodendrocytes, based on preliminary testing, they also function properly with MODAQ.
 
 It requires:
 
