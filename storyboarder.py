@@ -120,7 +120,8 @@ def storyboard(
     db_path: Path,
     hybrid: bool = False,
     raw_string: str = "_raw",
-    set_dir: Path = None,
+    src_dir: Path = None,
+    dest_dir: Path = None,
     split_docs: bool = False,
     tags: bool = True,
     verbose: bool = False,
@@ -134,7 +135,8 @@ def storyboard(
         db_path (Path): Filepath of the answerline database CSV
         hybrid (bool, optional): Is the set a hybrid visual-written tournament? Defaults to True.
         raw_string (str, optional): Suffix to identify the written packets. All written packets must end with this prefix for Storyboarder to identify them. Defaults to "_raw".
-        set_dir (Path, optional): Directory where the written packets are stored (and where the hybrid packets will be generated). Defaults to None.
+        src_dir (Path, optional): Directory where the written packets are stored (and where the hybrid packets will be generated). Defaults to `db_dir`.
+        dest_dir (Path, optional): Directory where the hybrid packets will be generated. Defaults to `src_dir`.
         split_docs (bool, optional): Should the answerline documents be split? Defaults to False.
         tags (bool, optional): Should the hybrid packets have author tags for the visual questions? Defaults to False.
         verbose (bool, optional): Print progress. Defaults to False.
@@ -142,8 +144,8 @@ def storyboard(
 
     ans_db = pd.read_csv(db_path).convert_dtypes()
 
-    if set_dir == None:
-        set_dir = db_dir
+    if src_dir is None:
+        src_dir = db_dir
 
     set_slug = set_name.title().replace(" ", "-")
 
@@ -175,8 +177,10 @@ def storyboard(
 
     # Prepare the hybrid packet generation, if configured
     make_hybrid = False
-    if hybrid and set_dir.exists():
-        written_packets = sorted(set_dir.glob(f"**/[!~]?*{raw_string}.docx"))
+    if hybrid and src_dir.exists():
+        written_packets = sorted(src_dir.glob(f"**/[!~]?*{raw_string}.docx"))
+        if dest_dir is None:
+            dest_dir = src_dir
         if len(list(written_packets)) == n_packet:
             make_hybrid = True
             hybrid_packets = n_packet * [None]
@@ -203,10 +207,7 @@ def storyboard(
 
         # If hybrid, make the current hybrid packet by appending to the corresponding written packet
         if make_hybrid:
-            hybrid_packets[i] = (
-                written_packets[i].parent
-                / f"{set_slug}_{packet_names[i].zfill(2)}.docx"
-            )
+            hybrid_packets[i] = dest_dir / f"{set_slug}_{packet_names[i].zfill(2)}.docx"
             if hybrid_packets[i].exists():
                 hybrid_packets[i].unlink()
             Path.copy(written_packets[i], hybrid_packets[i])
