@@ -124,6 +124,7 @@ def storyboard(
     dest_dir: Path = None,
     split_docs: bool = False,
     tags: bool = True,
+    force_end: bool = True,
     verbose: bool = False,
     try_open: bool = False,
 ):
@@ -254,9 +255,10 @@ def storyboard(
                     slide_q = hybrid_docx.add_paragraph(f"{j + n_written + 1}. ")
                     slide_runs = n_slide * [None]
                     for k in range(n_slide):  # Loop over slides
-                        slide_runs[k] = slide_q.add_run(
-                            f"{k + 1}" + f" " * (k < (n_slide - 1))
-                        )
+                        if force_end or k < (n_slide - 1):
+                            slide_runs[k] = slide_q.add_run(
+                                f"{k + 1}" + f" " * (k < (n_slide - 1))
+                            )
                         if k < (n_slide - 1):
                             if q_db.iloc[k]["Value"] == 20:
                                 slide_runs[k].bold = True
