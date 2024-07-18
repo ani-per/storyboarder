@@ -32,5 +32,6 @@ storyboard(
     / "tournaments"
     / "untitled-film-set"
     / "packets",  # The directory where the hybrid packets will be generated
+    force_end=True,
     verbose=True,  # Print progress
 )

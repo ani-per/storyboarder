@@ -140,7 +140,9 @@ def storyboard(
         dest_dir (Path, optional): Directory where the hybrid packets will be generated. Defaults to `src_dir`.
         split_docs (bool, optional): Should the answerline documents be split? Defaults to False.
         tags (bool, optional): Should the hybrid packets have author tags for the visual questions? Defaults to False.
+        force_end (bool, optional): Should the written equivalent of the visual slides end with the penultimate number for MODAQ use, or should they end with the final number? Defaults to True.
         verbose (bool, optional): Print progress. Defaults to False.
+        try_open (bool, optional): Try to open the generated answerlines document. Defaults to False.
     """
 
     ans_db = pd.read_csv(db_path).convert_dtypes()
@@ -257,7 +259,12 @@ def storyboard(
                     for k in range(n_slide):  # Loop over slides
                         if force_end or k < (n_slide - 1):
                             slide_runs[k] = slide_q.add_run(
-                                f"{k + 1}" + f" " * (k < (n_slide - 1))
+                                f"{k + 1}"
+                                + f" "
+                                * (
+                                    (not force_end and k < (n_slide - 2))
+                                    or (force_end and k < (n_slide - 1))
+                                )
                             )
                         if k < (n_slide - 1):
                             if q_db.iloc[k]["Value"] == 20:
