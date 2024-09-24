@@ -1,5 +1,5 @@
 from pathlib import Path  # Filepaths
-import typing  # Argument / output type checking
+from typing import Tuple # Argument / output type checking
 from re import sub, search, findall, split
 
 import pandas as pd  # DataFrames
@@ -7,10 +7,13 @@ import docx as docx  # Word documents - https://github.com/python-openxml/python
 from haggis.files.docx import (
     list_number,
 )  # Misc Word document utils - https://gitlab.com/madphysicist/haggis
-from imdb import Cinemagoer
+from tmdbv3api import TMDb, Movie, Search # TMDB API interface - https://github.com/AnthonyBloomer/tmdbv3api
 
 from subprocess import call
 from platform import system
+
+tmdb = TMDb()
+tmdb.api_key = "57989a14e4e5073fc2d332b37967de77" # Ani Perumalla's personal key
 
 
 # https://stackoverflow.com/a/40319071
@@ -38,19 +41,35 @@ def style_doc(tmpl):
     pass
 
 
+def get_main_ans(ans_raw: str) -> Tuple[str, str, list]:
+    ans_split = ans_raw.split(" [")
+    if len(ans_split) > 1:
+        alt_ans = search("\[(.*?)\]", "[" + ans_split[1]).group(1).split("; ")
+    else:
+        alt_ans = []
+    main_ans_split = ans_split[0].split(" (")
+    if len(main_ans_split) > 1:
+        pg_ans = f" ({main_ans_split[1]}"
+    else:
+        pg_ans = ""
+    main_ans = main_ans_split[0]
+
+    return (main_ans, pg_ans, alt_ans)
+
 def write_answerline(
-    ans_par: docx.text.paragraph.Paragraph, ans_raw: str, ans_type: str
+    ans_par: docx.text.paragraph.Paragraph,
+    main_ans: str, pg_ans: str, alt_ans: list,
+    ans_type: str
 ):
     """Write the database answerline to a given paragraph in a document.
 
     Args:
         ans_par (docx.text.paragraph.Paragraph): The paragraph to which the answerline should be written.
-        ans_raw (str): The raw (unformatted) answerline from the answerline database.
+        main_ans (str): The main answerline.
+        pg_ans (str): The pronunciation guide for the answerline.
+        alt_ans (str): The list of alternate answerlines.
         ans_type (str): The class of the answerline in the database (e.g. "Film", "Creator", "Director", "Crew", "Figure", "Surname", "Misc").
     """
-    ans_split = ans_raw.split(" [")
-    main_ans_split = ans_split[0].split(" (")
-    main_ans = main_ans_split[0]
     articles = (
         "A ", "The ", "a ", "the ",
         "Le ", "le ", "La ", "la ",
@@ -85,15 +104,12 @@ def write_answerline(
         main_run.bold = True
         main_run.underline = True
 
-    # Style the pronunciation guide if it exists
-    if len(main_ans_split) > 1:
-        pg_ans = f" ({main_ans_split[1]}"
-        ans_par.add_run(pg_ans)
+    # Add the pronunciation guide
+    ans_par.add_run(pg_ans)
 
     # Style the alt answerlines if they exist
-    if len(ans_split) > 1:
-        alt_ans = search("\[(.*?)\]", "[" + ans_split[1]).group(1).split("; ")
-        n_alt_ans = len(alt_ans)
+    n_alt_ans = len(alt_ans)
+    if n_alt_ans > 0:
         for i in range(n_alt_ans):
             for directive in ["or ", "accept ", "prompt on ", "reject "]:
                 if alt_ans[i].startswith(directive):
@@ -101,7 +117,7 @@ def write_answerline(
                         ans_par.add_run(" [")
                     ans_par.add_run(directive)
                     ans_val = split("^" + directive, alt_ans[i])[-1]
-                    if ans_type in ["Director", "Crew", "Figure", "Surname"]:
+                    if ans_type in ["Creator", "Director", "Crew", "Figure", "Surname"]:
                         alt_names = ans_val.split(" ")
                         n_alt_names = len(alt_names)
                         alt_name_runs = n_alt_names * [None]
@@ -169,6 +185,8 @@ def storyboard(
         n_visual_questions (int, optional): The number of visual questions in each packet, if hybrid. Defaults to 10.
         n_total_questions (int, optional): The number of total questions in each packet, including written and visual if hybrid. Defaults to 20.
     """
+    movie = Movie()
+    search = Search()
 
     ans_db = pd.read_csv(db_path).convert_dtypes()
 
@@ -276,8 +294,9 @@ def storyboard(
             if pd.notna(q_db.iloc[0]["Answerline"]):
                 # Write the answerline
                 answers[i][j] = templates[i].add_paragraph("", style="List Number")
+                main_ans, pg_ans, alt_ans = get_main_ans(q_db.iloc[0]["Answerline"])
                 write_answerline(
-                    answers[i][j], q_db.iloc[0]["Answerline"], q_db.iloc[0]["Type"]
+                    answers[i][j], main_ans, pg_ans, alt_ans, q_db.iloc[0]["Answerline_Type"]
                 )
 
                 if verbose:
@@ -318,14 +337,24 @@ def storyboard(
                     hybrid_answers[i][j] = hybrid_docx.add_paragraph("ANSWER: ")
                     write_answerline(
                         hybrid_answers[i][j],
-                        q_db.iloc[0]["Answerline"],
-                        q_db.iloc[0]["Type"],
+                        main_ans, pg_ans, alt_ans,
+                        q_db.iloc[0]["Answerline_Type"],
                     )
 
                 if (
-                    q_db.iloc[0]["Type"] == "Film"
+                    q_db.iloc[0]["Answerline_Type"] == "Film"
                 ):  # If it's a film, write the director in the answerline
-                    dir_raw = f" (dir. {q_db.iloc[0]['Director']})"
+                    director = ""
+                    if pd.notna(q_db.iloc[0]["Creator"]):
+                        director = q_db.iloc[0]["Creator"]
+                    else:
+                        results = search.movies(main_ans, year = q_db.iloc[0]["Source_Year"] if pd.notna(q_db.iloc[0]["Source_Year"]) else "")
+                        if (results["total_results"] > 0):
+                            director = ", ".join([crew['name'] for crew in movie.credits(results["results"][0].id).crew if crew['job'] == 'Director'])
+                    if len(director) > 0:
+                        dir_raw = f" (dir. {director})"
+                    else:
+                        dir_raw = ""
                     answers[i][j].add_run(dir_raw)
                     if make_hybrid:
                         hybrid_answers[i][j].add_run(dir_raw)
@@ -349,18 +378,18 @@ def storyboard(
                             src_run.italic = True
 
                         # If the question's not on a director, add the director credit for the source of the current slide
-                        if (q_db.iloc[0]["Type"] not in ["Director", "Creator"]) or (
-                            q_db.iloc[0]["Type"] in ["Director", "Creator"]
-                            and pd.notna(q_db.iloc[k]["Director"])
+                        if (q_db.iloc[0]["Answerline_Type"] not in ["Creator", "Director"]) or (
+                            q_db.iloc[0]["Answerline_Type"] in ["Creator", "Director"]
+                            and pd.notna(q_db.iloc[k]["Creator"])
                         ):
                             if (
                                 (k > 0)
-                                and (pd.isna(q_db.iloc[k]["Director"]))
-                                and (pd.notna(q_db.iloc[0]["Director"]))
+                                and (pd.isna(q_db.iloc[k]["Creator"]))
+                                and (pd.notna(q_db.iloc[0]["Creator"]))
                             ):
-                                dir_raw = f" (dir. {q_db.iloc[0]['Director']})"
-                            elif pd.notna(q_db.iloc[k]["Director"]):
-                                dir_raw = f" (dir. {q_db.iloc[k]['Director']})"
+                                dir_raw = f" (dir. {q_db.iloc[0]['Creator']})"
+                            elif pd.notna(q_db.iloc[k]["Creator"]):
+                                dir_raw = f" (dir. {q_db.iloc[k]['Creator']})"
                             else:
                                 dir_raw = ""
                             slides[i][j][k].add_run(dir_raw)
@@ -378,16 +407,16 @@ def storyboard(
                     # If hybrid, write the sources in the visual question as a note
                     if make_hybrid:
                         hybrid_answers[i][j].add_run(" (Sources: ")
-                        if q_db.iloc[0]["Type"] == "Director":
+                        if q_db.iloc[0]["Answerline_Type"] in ["Creator", "Director"]:
                             films = q_db["Source"][q_db["Source"].notnull()].unique()
                             for k in range(len(films)):  # Loop over films
                                 if k > 0:
                                     hybrid_answers[i][j].add_run("; ")
                                 hybrid_answers[i][j].add_run(films[k]).italic = True
                         else:
-                            directors = q_db["Director"][q_db["Director"].notnull()].unique()
+                            directors = q_db["Creator"][q_db["Creator"].notnull()].unique()
                             for k in range(len(directors)):  # Loop over films
-                                srcs_dir = q_db[q_db["Director"] == directors[k]][
+                                srcs_dir = q_db[q_db["Creator"] == directors[k]][
                                     "Source"
                                 ].unique()
                                 if k > 0:

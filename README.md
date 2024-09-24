@@ -8,7 +8,7 @@ It automatically creates:
 * If `hybrid` is configured, a set of hybrid packets that contain any combination of written and visual questions, for convenient use by moderators using [Oligodendrocytes](https://github.com/hftf/oligodendrocytes) or [MODAQ](https://github.com/alopezlago/MODAQ).
 
 > [!IMPORTANT]
-> The hybrid packet generation is compatible with both [Oligodendrocytes](https://github.com/hftf/oligodendrocytes) and [MODAQ](https://github.com/alopezlago/MODAQ) (which also uses [YAPP](https://github.com/alopezlago/YetAnotherPacketParser)). Although the process was originally designed to interface with Oligodendrocytes, based on preliminary testing, they also function properly with MODAQ.
+> The hybrid packet generation is compatible with both [Oligodendrocytes](https://github.com/hftf/oligodendrocytes) and [MODAQ](https://github.com/alopezlago/MODAQ) (which also uses [YAPP](https://github.com/alopezlago/YetAnotherPacketParser)). The pipeline to interface with MODAQ has been thoroughly tested for [Untitled Film Set](https://collegiate.quizbowlpackets.com/3197/).
 
 It requires:
 
@@ -33,13 +33,14 @@ It consists of:
    * [`pandas`](https://pandas.pydata.org/)
    * [`python-docx`](https://github.com/python-openxml/python-docx)
    * [`haggis`](https://gitlab.com/madphysicist/haggis)
+   * [`tmdbv3api`](https://github.com/AnthonyBloomer/tmdbv3api)
 2. Setup the visual answerline database using the template as an example.
    * Each visual question comprised of $n$ slides corresponds to $n$ rows.
-   * The first row is special in that it should contain the necessary metadata about the question (`Answerline` and `Type` [^1]).
-   * Each row, including the first, should contain the other metadata about the source of the respective slide (`Source`, `Director`, `Value`).
+   * The first row is special in that it must contain the necessary metadata about the question (`Answerline` and `Type` [^1]).
+   * Each row, including the first, must contain the other metadata about the source of the respective slide (`Source`, `Creator`, `Value`).
    * Make sure to use the correct `Type` based on the answerline. The following `Types` are recognized by Storyboarder:
      * `Film`
-     * `Director`
+     * `Creator`
      * `Figure`
      * `Crew`
    * To reference a music video in a slide rather than a film, put the name of the music video in quotation marks in the corresponding `Source` cell for that slide.
@@ -55,9 +56,14 @@ It consists of:
 > [!WARNING]
 > Storyboarder performs a first run of formatting on each answerline. However, once Storyboarder has been run, you should go through each visual answerline and format it as per [style guides](https://minkowski.space/quizbowl/manuals/style/), as there will likely be errors. Hence, it is recommended (but not required) to make sure that the answerlines for the written portion of a hybrid set are verified and proofreaded before running Storyboarder.
 
+> [!WARNING]
+> Make sure you close all the relevant files (written packets, hybrid packets, answerlines spreadsheet and database) before trying to run the script, since it cannot rewrite any files that are currently open.
+
 ## History
 
 `2024-03-24`: This project was created to handle setup for mirrors of [Untitled Film Set](https://hsquizbowl.org/forums/viewtopic.php?t=25325) (privately, since the set was used for testing and was not yet played at that time).
+
+`2024-09-24`: The scripts were updated to automatically populate answerlines with information about directors from source films, using the [`tmdbv3api` package](https://github.com/AnthonyBloomer/tmdbv3api).
 
 ## Feedback
 
