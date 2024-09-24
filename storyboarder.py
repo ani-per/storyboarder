@@ -1,11 +1,13 @@
 from pathlib import Path  # Filepaths
 import typing  # Argument / output type checking
+from re import sub, search, findall, split
+
 import pandas as pd  # DataFrames
 import docx as docx  # Word documents - https://github.com/python-openxml/python-docx
 from haggis.files.docx import (
     list_number,
 )  # Misc Word document utils - https://gitlab.com/madphysicist/haggis
-from re import sub, search, findall
+from imdb import Cinemagoer
 
 from subprocess import call
 from platform import system
@@ -30,7 +32,9 @@ def make_curly(str: str) -> str:
 
 
 def style_doc(tmpl):
-    # tmpl.styles["Heading 1"].font = ""
+    tmpl.styles["Title"].font.name = "Times New Roman"
+    tmpl.styles["Heading 1"].font.name = "Times New Roman"
+    tmpl.styles["Normal"].font.name = "Times New Roman"
     pass
 
 
@@ -42,14 +46,20 @@ def write_answerline(
     Args:
         ans_par (docx.text.paragraph.Paragraph): The paragraph to which the answerline should be written.
         ans_raw (str): The raw (unformatted) answerline from the answerline database.
-        ans_type (str): The class of the answerline in the database (e.g. "Film", "Director", "Crew", "Figure", "Misc").
+        ans_type (str): The class of the answerline in the database (e.g. "Film", "Creator", "Director", "Crew", "Figure", "Surname", "Misc").
     """
     ans_split = ans_raw.split(" [")
     main_ans_split = ans_split[0].split(" (")
     main_ans = main_ans_split[0]
+    articles = (
+        "A ", "The ", "a ", "the ",
+        "Le ", "le ", "La ", "la ",
+        "El ", "el ", "Il ", "il ",
+        "Dir ", "dir ", # "Die ", "die "
+    )
 
     # Style the main answerline first
-    if ans_type in ["Director", "Crew", "Figure"]:
+    if ans_type in ["Creator", "Director", "Crew", "Figure", "Surname"]: # If it's a person, format their surname
         main_names = main_ans.split(" ")
         n_main_names = len(main_names)
         main_runs = n_main_names * [None]
@@ -61,11 +71,19 @@ def write_answerline(
             else:
                 ans_par.add_run(" ")
     else:
-        main_run = ans_par.add_run(main_ans)
+        if main_ans.startswith(articles): # Don't format the article
+            main_words = main_ans.split(" ")
+            article_run = ans_par.add_run(main_words[0] + " ") # Unformatted article
+            main_run = ans_par.add_run(" ".join(main_words[1:])) # Rest of answerline
+        else: # Just print the answerline as-is
+            article_run = ans_par.add_run("")
+            main_run = ans_par.add_run(main_ans)
+        if ans_type == "Film": # If it's a film, italicize it
+            article_run.italic = True
+            main_run.italic = True
+
         main_run.bold = True
         main_run.underline = True
-    if ans_type == "Film":
-        main_run.italic = True
 
     # Style the pronunciation guide if it exists
     if len(main_ans_split) > 1:
@@ -76,15 +94,15 @@ def write_answerline(
     if len(ans_split) > 1:
         alt_ans = search("\[(.*?)\]", "[" + ans_split[1]).group(1).split("; ")
         n_alt_ans = len(alt_ans)
-        alt_ans_runs = n_alt_ans * [None]
         for i in range(n_alt_ans):
             for directive in ["or ", "accept ", "prompt on ", "reject "]:
                 if alt_ans[i].startswith(directive):
                     if i == 0:
                         ans_par.add_run(" [")
                     ans_par.add_run(directive)
-                    if ans_type in ["Director", "Crew", "Figure"]:
-                        alt_names = alt_ans[i].split(directive)[-1].split(" ")
+                    ans_val = split("^" + directive, alt_ans[i])[-1]
+                    if ans_type in ["Director", "Crew", "Figure", "Surname"]:
+                        alt_names = ans_val.split(" ")
                         n_alt_names = len(alt_names)
                         alt_name_runs = n_alt_names * [None]
                         for j in range(n_alt_names):
@@ -94,20 +112,23 @@ def write_answerline(
                                     alt_name_runs[j].underline = True
                                     if not directive.startswith("prompt"):
                                         alt_name_runs[j].bold = True
-                                    if ans_type == "Film":
-                                        alt_name_runs[j].italic = True
                             else:
                                 ans_par.add_run(" ")
                     else:
-                        alt_ans_runs[i] = ans_par.add_run(
-                            alt_ans[i].split(directive)[-1]
-                        )
+                        if ans_val.startswith(articles): # Don't format the article
+                            alt_words = ans_val.split(" ")
+                            article_run = ans_par.add_run(alt_words[0] + " ") # Unformatted article
+                            alt_run = ans_par.add_run(" ".join(alt_words[1:])) # Rest of answerline
+                        else: # Just print the answerline as-is
+                            article_run = ans_par.add_run("")
+                            alt_run = ans_par.add_run(ans_val)
+                        if ans_type == "Film": # If it's a film, italicize it
+                            article_run.italic = True
+                            alt_run.italic = True
                         if not directive.startswith("reject"):
-                            alt_ans_runs[i].underline = True
+                            alt_run.underline = True
                             if not directive.startswith("prompt"):
-                                alt_ans_runs[i].bold = True
-                            if ans_type == "Film":
-                                alt_ans_runs[i].italic = True
+                                alt_run.bold = True
                     if i == (n_alt_ans - 1):
                         ans_par.add_run("]")
                     else:
@@ -127,6 +148,8 @@ def storyboard(
     force_end: bool = True,
     verbose: bool = False,
     try_open: bool = False,
+    n_visual_questions: int = 10,
+    n_total_questions: int = 20,
 ):
     """Create the visual answerline document, and hybrid packets along the way if desired.
 
@@ -143,6 +166,8 @@ def storyboard(
         force_end (bool, optional): Should the written equivalent of the visual slides end with the penultimate number for MODAQ use, or should they end with the final number? Defaults to True.
         verbose (bool, optional): Print progress. Defaults to False.
         try_open (bool, optional): Try to open the generated answerlines document. Defaults to False.
+        n_visual_questions (int, optional): The number of visual questions in each packet, if hybrid. Defaults to 10.
+        n_total_questions (int, optional): The number of total questions in each packet, including written and visual if hybrid. Defaults to 20.
     """
 
     ans_db = pd.read_csv(db_path).convert_dtypes()
@@ -175,13 +200,17 @@ def storyboard(
             documents[i] = documents[0]
 
     # Use curly quotes
-    for col in ["Answerline", "Source", "Director", "Notes"]:
-        ans_db[col] = ans_db[col].apply(lambda s: make_curly(s) if pd.notna(s) else s)
+    for col in ["Answerline", "Source", "Creator", "Director", "Notes"]:
+        if col in ans_db.columns:
+            ans_db[col] = ans_db[col].apply(lambda s: make_curly(s) if pd.notna(s) else s)
 
     # Prepare the hybrid packet generation, if configured
     make_hybrid = False
     if hybrid and src_dir.exists():
         written_packets = sorted(src_dir.glob(f"**/[!~]?*{raw_string}.docx"))
+        if len(list(written_packets)) == 0:
+            print("There aren't any written packets in the source folder.")
+            return
         if dest_dir is None:
             dest_dir = src_dir
         if len(list(written_packets)) == n_packet:
@@ -216,7 +245,7 @@ def storyboard(
             Path.copy(written_packets[i], hybrid_packets[i])
             hybrid_docx = docx.Document(hybrid_packets[i])
             # Calculate the number of already-written questions in the packet
-            # This compiles all the numbers in the document that are succeeded by a period, then takes the maximum
+            # This compiles all the numbers in the document that begin a new line and are succeeded by a period, then takes the maximum of those numbers
             # https://stackoverflow.com/questions/952914/how-do-i-make-a-flat-list-out-of-a-list-of-lists#comment123215183_952952
             detect_written = [
                 int(s)
@@ -232,6 +261,9 @@ def storyboard(
             ]
             if len(detect_written) > 0:
                 n_written = max(detect_written)
+                if (n_written > (n_total_questions - n_visual_questions)):
+                    print(f"Skipping packet {i + 1} - there are already {n_written} questions, which means there isn't space for {n_visual_questions} more questions in packets of {n_total_questions} questions.")
+                    continue
             else:
                 n_written = 0
 
@@ -253,7 +285,8 @@ def storyboard(
 
                 # If hybrid, make the placeholder question
                 if make_hybrid:
-                    hybrid_docx.add_paragraph("")
+                    if (j > 0):
+                        hybrid_docx.add_paragraph("")
                     slide_q = hybrid_docx.add_paragraph(f"{j + n_written + 1}. ")
                     slide_runs = n_slide * [None]
                     for k in range(n_slide):  # Loop over slides
@@ -315,9 +348,9 @@ def storyboard(
                         ):  # Don't italicize if title's in quotes (e.g. music video)
                             src_run.italic = True
 
-                        # If the question's not a Director, add the director credit for the source of the current slide
-                        if (q_db.iloc[0]["Type"] != "Director") or (
-                            q_db.iloc[0]["Type"] == "Director"
+                        # If the question's not on a director, add the director credit for the source of the current slide
+                        if (q_db.iloc[0]["Type"] not in ["Director", "Creator"]) or (
+                            q_db.iloc[0]["Type"] in ["Director", "Creator"]
                             and pd.notna(q_db.iloc[k]["Director"])
                         ):
                             if (
@@ -352,9 +385,9 @@ def storyboard(
                                     hybrid_answers[i][j].add_run("; ")
                                 hybrid_answers[i][j].add_run(films[k]).italic = True
                         else:
-                            dirs = q_db["Director"][q_db["Director"].notnull()].unique()
-                            for k in range(len(dirs)):  # Loop over films
-                                srcs_dir = q_db[q_db["Director"] == dirs[k]][
+                            directors = q_db["Director"][q_db["Director"].notnull()].unique()
+                            for k in range(len(directors)):  # Loop over films
+                                srcs_dir = q_db[q_db["Director"] == directors[k]][
                                     "Source"
                                 ].unique()
                                 if k > 0:
@@ -373,7 +406,7 @@ def storyboard(
                                             srcs_dir[l]
                                         ).italic = True
                                 hybrid_answers[i][j].add_run(" - dir. ")
-                                hybrid_answers[i][j].add_run(dirs[k])
+                                hybrid_answers[i][j].add_run(directors[k])
                         hybrid_answers[i][j].add_run(")")
 
                 # If hybrid, write the author tag
@@ -381,7 +414,7 @@ def storyboard(
                     if pd.notna(q_db.iloc[0]["Author"]):
                         hybrid_docx.add_paragraph(f"<{q_db.iloc[0]['Author']}, Visual>")
                     else:
-                        hybrid_docx.add_paragraph(f"<, Visual>")
+                        hybrid_docx.add_paragraph(f"<Visual>")
 
                 # If there are notes, write them
                 if pd.notna(q_db.iloc[0]["Notes"]):
