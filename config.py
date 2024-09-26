@@ -2,7 +2,7 @@ from storyboarder import *  # noqa: F403
 
 set_name = "Untitled Film Set"  # Name of the set/packet
 db_dir = (
-    Path.cwd() / "demo" / "untitled-film-set"
+    Path.cwd() / "demo"
 )  # Directory where the answerline document should be saved
 db_path = (
     db_dir / f"{set_name.title().replace(' ', '-')}_Database.csv"
@@ -14,24 +14,8 @@ storyboard(
     db_path,
     hybrid=True,  # Is the set a hybrid visual-written tournament?
     raw_string="W",  # The suffix to identify the written packets. All written packets must end with this prefix for Storyboarder to identify them.
-    src_dir=Path.home()
-    / "Documents"
-    / "AP"
-    / "APMISC"
-    / "quizbowl"
-    / "storyboarder"
-    / "demo"
-    / "untitled-film-set"
-    / "packets",  # The directory where the written packets are stored
-    dest_dir=Path.home()
-    / "Documents"
-    / "AP"
-    / "APMISC"
-    / "quizbowl"
-    / "oligo"
-    / "tournaments"
-    / "untitled-film-set"
-    / "packets",  # The directory where the hybrid packets will be generated
+    src_dir=db_dir / "packets",  # The directory where the written packets are stored
+    # dest_dir=db_dir / "packets",  # The directory where the hybrid packets will be generated, if different from `src_dir`
     force_end=True,
     verbose=True,  # Print progress
 )
