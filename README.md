@@ -10,13 +10,13 @@ It automatically creates:
 > [!IMPORTANT]
 > The hybrid packet generation is compatible with both [Oligodendrocytes](https://github.com/hftf/oligodendrocytes) and [MODAQ](https://github.com/alopezlago/MODAQ) (which also uses [YAPP](https://github.com/alopezlago/YetAnotherPacketParser)). The pipeline to interface with MODAQ has been thoroughly tested for [Untitled Film Set](https://collegiate.quizbowlpackets.com/3197/).
 
-It requires:
+## Requirements
 
 * Python3
-* A visual answerline database CSV
-* If `hybrid` is configured, a set of packets as Word documents that contain the questions for the written portion of a hybrid tournament
+* [A properly-configured visual answerline database CSV][/demo/Untitled-Film-Set_Database.csv]
+* If `hybrid` is configured, [a set of packets as Word documents][/demo/packets/] that contain the questions for the written portion of a hybrid tournament
 
-It consists of:
+## Contents
 
 * Python scripts
   * `storyboarder.py`
@@ -29,21 +29,30 @@ It consists of:
 
 ## Usage
 
-1. Install, preferably using [`pip`](https://pip.pypa.io/en/stable/):
+1. Install, e.g. using [`pip`](https://pip.pypa.io/en/stable/):
    * [`pandas`](https://pandas.pydata.org/)
    * [`python-docx`](https://github.com/python-openxml/python-docx)
    * [`haggis`](https://gitlab.com/madphysicist/haggis)
    * [`tmdbv3api`](https://github.com/AnthonyBloomer/tmdbv3api)
 2. Setup the visual answerline database using the template as an example.
    * Each visual question comprised of $n$ slides corresponds to $n$ rows.
-   * The first row is special in that it must contain the necessary metadata about the question (`Answerline` and `Type` [^1]).
-   * Each row, including the first, must contain the other metadata about the source of the respective slide (`Source`, `Creator`, `Value`).
-   * Make sure to use the correct `Type` based on the answerline. The following `Types` are recognized by Storyboarder:
+   * Each row per question, including the first, must contain the other metadata about the source of the respective slide (`Packet`, `Number`, `Source` and `Value`).
+   * The first row for each question is special in that it must *also* contain the necessary metadata about the question (`Answerline` and `Answerline_Type` [^1]).
+   * Make sure to use the correct `Answerline_Type` based on the answerline. The following `Answerline_Types` are recognized by Storyboarder:
      * `Film`
      * `Creator`
+     * `Director`
      * `Figure`
      * `Crew`
-   * To reference a music video in a slide rather than a film, put the name of the music video in quotation marks in the corresponding `Source` cell for that slide.
+     * `Location`
+     * `Surname`
+     * `Misc`
+   * Optional columns are `Source_Type`, `Source_Year`, and `Creator`.
+     * Storyboarder automatically populates the information regarding film directors using the `tmdbv3api` utility to search [TMDB](https://www.themoviedb.org/movie).
+     * To help the automatic detection, you may provide the film's release year in the `Source_Year` column for the corresponding row.
+     * To override the automatic results for a given `Source`, you can explicitly assign its `Creator` in the corresponding cell.
+     * The default `Source_Type` per source is assumed to be `Film`, so unless the `Source` is not a film, you may leave the corresponding cell empty.
+     * To reference a music video, video game, or essay in a slide rather than a film for a given `Source`, change the `Source_Type`. Specifically for the `Music Video` type, add quotation marks around the `Source` value.
 3. Configure the parameters in `config.py` and run `config.py`.
 4. You should now have:
    * A roughly-formatted visual answerline document that contains both answerlines and slide-by-slide information for each visual question.
@@ -63,7 +72,7 @@ It consists of:
 
 `2024-03-24`: This project was created to handle setup for mirrors of [Untitled Film Set](https://hsquizbowl.org/forums/viewtopic.php?t=25325) (privately, since the set was used for testing and was not yet played at that time).
 
-`2024-09-24`: The scripts were updated to automatically populate answerlines with information about directors from source films, using the [`tmdbv3api` package](https://github.com/AnthonyBloomer/tmdbv3api).
+`2024-09-27`: The scripts were updated to automatically populate answerlines with information about film directors, using the [`tmdbv3api` package](https://github.com/AnthonyBloomer/tmdbv3api).
 
 ## Feedback
 

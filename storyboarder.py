@@ -1,6 +1,7 @@
 from pathlib import Path  # Filepaths
 from typing import Tuple  # Argument / output type checking
-from re import sub, search, findall, split
+from re import sub, search, findall, split # String operations
+from itertools import compress
 
 import pandas as pd  # DataFrames
 import docx as docx  # Word documents - https://github.com/python-openxml/python-docx
@@ -91,7 +92,7 @@ def write_answerline(
         "Il ",
         "il ",
         "Dir ",
-        "dir ",  # "Die ", "die "
+        "dir ",
     )
 
     # Style the main answerline first
@@ -212,6 +213,9 @@ def storyboard(
         n_visual_questions (int, optional): The number of visual questions in each packet, if hybrid. Defaults to 10.
         n_total_questions (int, optional): The number of total questions in each packet, including written and visual if hybrid. Defaults to 20.
     """
+    media = ["Film", "Music Video", "Video", "Television"]
+    people = ["Creator", "Director"]
+
     movie = Movie()
     search = Search()
 
@@ -393,7 +397,7 @@ def storyboard(
                             else "",
                         )
                         if results["total_results"] > 0:
-                            director = ", ".join(
+                            director = make_curly(", ".join(
                                 [
                                     crew["name"]
                                     for crew in movie.credits(
@@ -401,7 +405,7 @@ def storyboard(
                                     ).crew
                                     if crew["job"] == "Director"
                                 ]
-                            )
+                            ))
                     if len(director) > 0:
                         dir_raw = f" (dir. {director})"
                     else:
@@ -410,48 +414,61 @@ def storyboard(
                     if make_hybrid:
                         hybrid_answers[i][j].add_run(dir_raw)
                 else:  # Prepare the slide annotations, if it's not a film
-                    # Extract the metadata for sources that are films
-                    src_types = q_db["Source_Type"].tolist()
-                    which_films = (src_types == "Film") or (pd.isna(src_types))
-                    films = q_db["Source"][which_films].unique()
+                    if q_db.iloc[0]["Answerline_Type"] not in people:
+                        # Extract the metadata for sources that are films
+                        film_data = q_db[["Source", "Source_Type", "Source_Year", "Creator"]].drop_duplicates().reset_index(drop=True)
+
+                        for k in range(len(film_data)): # Loop over films
+                            if (pd.isna(film_data["Creator"][k])):
+                                results = search.movies(
+                                    film_data['Source'][k],
+                                    year=film_data["Source_Year"][k]
+                                    if pd.notna(film_data["Source_Year"][k])
+                                    else "",
+                                )
+                                if results["total_results"] > 0:
+                                    film_data.at[k, "Creator"] = make_curly(", ".join(
+                                        [
+                                            crew["name"]
+                                            for crew in movie.credits(
+                                                results["results"][0].id
+                                            ).crew
+                                            if crew["job"] == "Director"
+                                        ]
+                                    ))
 
                     slides[i][j] = n_slide * [None]
                     for k in range(n_slide):  # Loop over slides
-                        # Add an annotation if there's a source listed for the current slide
-                        if pd.isna(q_db.iloc[k]["Source"]):
-                            src_raw = ""
-                        else:
-                            src_raw = q_db.iloc[k]["Source"]
-
-                        # Write the slide annotation
                         slides[i][j][k] = templates[i].add_paragraph(
                             "", style="List Number 2"
                         )
+
+                        # Add an annotation if there's a source listed for the current slide
+                        src_exists = pd.notna(q_db.iloc[k]["Source"])
+                        src_raw = q_db.iloc[k]["Source"] if src_exists else ""
                         src_run = slides[i][j][k].add_run(src_raw)
-                        if (len(src_raw) > 0) and not (
+                        if (src_exists) and not (
                             q_db.iloc[k]["Source"].startswith(("'", '"', "‘", "“"))
                         ):  # Don't italicize if title's in quotes (e.g. music video)
                             src_run.italic = True
 
-                        # If the question's not on a director, add the director credit for the source of the current slide
+                        # If the question's not on a creator, add the director credit for the source of the current slide
                         if (
                             q_db.iloc[0]["Answerline_Type"]
-                            not in ["Creator", "Director"]
-                        ) or (
-                            q_db.iloc[0]["Answerline_Type"] in ["Creator", "Director"]
-                            and pd.notna(q_db.iloc[k]["Creator"])
+                            not in people
                         ):
-                            if (
-                                (k > 0)
-                                and (pd.isna(q_db.iloc[k]["Creator"]))
-                                and (pd.notna(q_db.iloc[0]["Creator"]))
-                            ):
-                                dir_raw = f" (dir. {q_db.iloc[0]['Creator']})"
-                            elif pd.notna(q_db.iloc[k]["Creator"]):
-                                dir_raw = f" (dir. {q_db.iloc[k]['Creator']})"
+                            creator = ""
+                            if pd.notna(q_db.iloc[k]["Creator"]):
+                                creator = q_db.iloc[k]["Creator"]
                             else:
-                                dir_raw = ""
-                            slides[i][j][k].add_run(dir_raw)
+                                creator = film_data["Creator"][film_data["Source"].eq(q_db.iloc[k]["Source"]).idxmax()]
+
+                            if pd.isna(q_db.iloc[k]["Source_Type"]) or (q_db.iloc[k]["Source_Type"] in media):
+                                credit = "dir."
+                            else:
+                                credit = "by"
+                            if (pd.notna(creator)) and (len(creator) > 0):
+                                slides[i][j][k].add_run(f" ({credit} {creator})")
 
                         # Format the annotation as a list element
                         if k == 0:
@@ -466,37 +483,36 @@ def storyboard(
                     # If hybrid, write the sources in the visual question as a note
                     if make_hybrid:
                         hybrid_answers[i][j].add_run(" (Sources: ")
-                        if q_db.iloc[0]["Answerline_Type"] in ["Creator", "Director"]:
+                        if q_db.iloc[0]["Answerline_Type"] in people:
                             films = q_db["Source"][q_db["Source"].notnull()].unique()
                             for k in range(len(films)):  # Loop over films
                                 if k > 0:
                                     hybrid_answers[i][j].add_run("; ")
                                 hybrid_answers[i][j].add_run(films[k]).italic = True
                         else:
-                            directors = q_db["Creator"][
-                                q_db["Creator"].notnull()
-                            ].unique()
-                            for k in range(len(directors)):  # Loop over films
-                                srcs_dir = q_db[q_db["Creator"] == directors[k]][
-                                    "Source"
-                                ].unique()
+                            directors = film_data["Creator"].unique()
+                            for k in range(len(directors)):  # Loop over directors
+                                srcs = film_data[film_data["Creator"] == directors[k]]["Source"].unique()
                                 if k > 0:
                                     hybrid_answers[i][j].add_run("; ")
-                                for l in range(len(srcs_dir)):
+                                for l in range(len(srcs)):
                                     if l > 0:
                                         hybrid_answers[i][j].add_run(", ")
-                                    if srcs_dir[
+                                    if srcs[
                                         l
                                     ].startswith(
                                         ("'", '"', "‘", "“")
                                     ):  # Don't italicize if title's in quotes (e.g. music video)
-                                        hybrid_answers[i][j].add_run(srcs_dir[l])
+                                        hybrid_answers[i][j].add_run(srcs[l])
                                     else:
                                         hybrid_answers[i][j].add_run(
-                                            srcs_dir[l]
+                                            srcs[l]
                                         ).italic = True
-                                hybrid_answers[i][j].add_run(" - dir. ")
-                                hybrid_answers[i][j].add_run(directors[k])
+                                if pd.isna(film_data.iloc[k]["Source_Type"]) or (film_data.iloc[k]["Source_Type"] in media):
+                                    credit = "- dir."
+                                else:
+                                    credit = "by"
+                                hybrid_answers[i][j].add_run(f" {credit} {directors[k]}")
                         hybrid_answers[i][j].add_run(")")
 
                 # If hybrid, write the author tag
