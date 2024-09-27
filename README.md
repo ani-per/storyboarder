@@ -19,9 +19,9 @@ It automatically creates:
 ## Contents
 
 * Python scripts
-  * `storyboarder.py`
+  * [`storyboarder.py`](storyboarder.py)
     * The backend script that, given a visual answerline database, performs the generation of the visual answerline document and hybrid packets.
-  * `config.py`
+  * [`config.py`](config.py)
     * The front-facing script that configures the set metadata and how to perform the creation.
 * Google Drive folder
   * Google Slides templates for standardized, color-coded visual packets
@@ -56,17 +56,16 @@ It automatically creates:
 3. Configure the parameters in `config.py` and run `config.py`.
 4. You should now have:
    * A roughly-formatted visual answerline document that contains both answerlines and slide-by-slide information for each visual question.
-   * If configured, a set of hybrid packets that contain both written and visual questions for convenient use by moderators using [Oligodendrocytes](https://github.com/hftf/oligodendrocytes).
-5. If you need to edit either the database or the written packets and run again, make sure all Storyboarder-generated documents (visual answerlines document, hybrid packets) are closed at the time of running, because `python-docx` will throw an error when creating/editing/deleting those files.
+   * (If configured) a set of hybrid packets that contain both written and visual questions for convenient use by moderators using [MODAQ](https://github.com/alopezlago/MODAQ) or [Oligodendrocytes](https://github.com/hftf/oligodendrocytes).
+
+> [!WARNING]
+> Make sure you close all Storyboarder-generated files (hybrid packets, visual answerlines spreadsheet) before running `config.py`, since `python-docx` cannot rewrite any files that are currently open and will hence throw an error.
 
 > [!IMPORTANT]
 > Storyboarder can handle fully-visual tournaments. Just configure `hybrid = True` and create a set of empty packet files in `set_dir` to act as the "written" files.
 
 > [!WARNING]
 > Storyboarder performs a first run of formatting on each answerline. However, once Storyboarder has been run, you should go through each visual answerline and format it as per [style guides](https://minkowski.space/quizbowl/manuals/style/), as there will likely be errors. Hence, it is recommended (but not required) to make sure that the answerlines for the written portion of a hybrid set are verified and proofreaded before running Storyboarder.
-
-> [!WARNING]
-> Make sure you close all the relevant files (written packets, hybrid packets, answerlines spreadsheet and database) before trying to run the script, since it cannot rewrite any files that are currently open.
 
 ## History
 
