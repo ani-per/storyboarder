@@ -2,7 +2,7 @@
 
 **Storyboarder** is an assistant for writing visual quizbowl sets, created by Ani Perumalla in 2024. Storyboarder can handle sets/packets that are **fully visual** (e.g. [Eyes That Do Not See](https://collegiate.quizbowlpackets.com/1906/)) or **hybrid written + visual** (e.g. [Untitled Film Set](https://collegiate.quizbowlpackets.com/3197/)). The primary purpose is to assist in production of film sets, but Storyboarder can be used for visual packets that draw from any combination of media (film, television, online videos, art, photography, literature, etc.).
 
-It automatically creates:
+Storyboarder automatically creates:
 
 * A roughly-formatted visual answerline document that contains both answerlines and slide-by-slide information for each visual question.
 * If `hybrid` is configured, a set of hybrid packets that contain any combination of written and visual questions, for convenient use by moderators using [Oligodendrocytes](https://github.com/hftf/oligodendrocytes) or [MODAQ](https://github.com/alopezlago/MODAQ).
