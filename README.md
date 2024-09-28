@@ -60,7 +60,7 @@ Storyboarder automatically creates:
 
 ## Example
 
-See the `Untitled-Film-Set` directory of this repository for a set of example packets generated using the database template and scripts for [2024 Untitled Film Set](https://collegiate.quizbowlpackets.com/3197/).
+See the [`demo/untitled-film-set`](demo/untitled-film-set/) directory of this repository for a set of example packets generated using the database template and scripts for [2024 Untitled Film Set](https://collegiate.quizbowlpackets.com/3197/).
 
 ## Notes
 
