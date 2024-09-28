@@ -1,6 +1,6 @@
 # Storyboarder
 
-**Storyboarder** is an assistant for writing visual quizbowl sets. Storyboarder can handle sets/packets that are **fully visual** (e.g. Eyes That Do Not See) or **hybrid written + visual** (e.g. Untitled Film Set). The primary intention is to handle film sets, but an auxiliary goal is to handle sets sourced from other areas (art, photography, etc.) as well.
+**Storyboarder** is an assistant for writing visual quizbowl sets, created by Ani Perumalla in 2024. Storyboarder can handle sets/packets that are **fully visual** (e.g. [Eyes That Do Not See](https://collegiate.quizbowlpackets.com/1906/)) or **hybrid written + visual** (e.g. [Untitled Film Set](https://collegiate.quizbowlpackets.com/3197/)). The primary purpose is to assist in production of film sets, but Storyboarder can be used for visual packets that draw from any combination of media (film, television, online videos, art, photography, literature, etc.).
 
 It automatically creates:
 
@@ -12,20 +12,20 @@ It automatically creates:
 
 ## Requirements
 
-* Python3
+* [Python(3)](https://www.python.org/downloads/)
 * [A properly-configured visual answerline database CSV](demo/Untitled-Film-Set_Database.csv)
 * If `hybrid` is configured, [a set of packets as Word documents](demo/packets/) that contain the questions for the written portion of a hybrid tournament
 
 ## Contents
 
+* [Google Drive folder](https://drive.google.com/drive/folders/1uJXE8UJXxA2VepXUR7n4mBuHC4J9txpS?usp=sharing)
+  * [Google Slides template for standardized, color-coded visual packets](https://docs.google.com/presentation/d/1CbMiGaGSL4gyph7laR1obxKAvC_3cW-cDHVXUdTcqBk/edit?usp=sharing) [^1]
+  * [A visual answerline database template](https://docs.google.com/spreadsheets/d/1r6tFbcZvPioG1RqSINoclno7yGYWZSv-Ygo0qBbxQq0/edit?usp=sharing) [^2] (which should be exported as a CSV once configured)
 * Python scripts
   * [`storyboarder.py`](storyboarder.py)
-    * The backend script that, given a visual answerline database, performs the generation of the visual answerline document and hybrid packets.
+    * The backend script that, given a properly-configured visual answerline database CSV, performs the generation of the visual answerline document and hybrid packets.
   * [`config.py`](config.py)
     * The front-facing script that configures the set metadata and how to perform the creation.
-* Google Drive folder
-  * Google Slides templates for standardized, color-coded visual packets
-  * A visual answerline database template
 
 ## Usage
 
@@ -37,7 +37,7 @@ It automatically creates:
 2. Setup the visual answerline database using the template as an example.
    * Each visual question comprised of $n$ slides corresponds to $n$ rows.
    * Each row per question, including the first, must contain the other metadata about the source of the respective slide (`Packet`, `Number`, `Source` and `Value`).
-   * The first row for each question is special in that it must *also* contain the necessary metadata about the question (`Answerline` and `Answerline_Type` [^1]).
+   * The first row for each question is special in that it must *also* contain the necessary metadata about the question (`Answerline` and `Answerline_Type` [^3]).
    * Make sure to use the correct `Answerline_Type` based on the answerline. The following `Answerline_Types` are recognized by Storyboarder:
      * `Film`
      * `Creator`
@@ -58,6 +58,12 @@ It automatically creates:
    * A roughly-formatted visual answerline document that contains both answerlines and slide-by-slide information for each visual question.
    * (If configured) a set of hybrid packets that contain both written and visual questions for convenient use by moderators using [MODAQ](https://github.com/alopezlago/MODAQ) or [Oligodendrocytes](https://github.com/hftf/oligodendrocytes).
 
+## Example
+
+See the `Untitled-Film-Set` directory of this repository for a set of example packets generated using the database template and scripts for [2024 Untitled Film Set](https://collegiate.quizbowlpackets.com/3197/).
+
+## Notes
+
 > [!WARNING]
 > Make sure you close all Storyboarder-generated files (hybrid packets, visual answerlines spreadsheet) before running `config.py`, since `python-docx` cannot rewrite any files that are currently open and will hence throw an error.
 
@@ -77,4 +83,6 @@ It automatically creates:
 
 Please [create an issue](https://github.com/ani-per/storyboarder/issues/new). [Pull requests](https://github.com/ani-per/storyboarder/compare) are welcomed!
 
-[^1]: All other columns (`Difficulty`, `Continent`, etc.) are just for benefit of the writers and are not actually used in the processing.
+[^1]: The slide template uses the [Wong](https://www.nature.com/articles/nmeth.1618) [colorblind-friendly palette](https://davidmathlogic.com/colorblind/).
+[^2]: Note that this template assumes that each visual question is comprised of exactly 8 slides. However, the scripts can handle any question length.
+[^3]: All other columns (`Difficulty`, `Continent`, etc.) are just for benefit of the writers and are not actually used in the processing.

@@ -5,8 +5,6 @@ from itertools import compress
 
 import pandas as pd  # DataFrames
 import docx as docx  # Word documents - https://github.com/python-openxml/python-docx
-from docx.enum.style import WD_STYLE_TYPE  # Custom styles
-from docx.dml.color import ColorFormat  # Custom colors
 from docx.shared import RGBColor  # RGB colors
 from haggis.files.docx import (
     list_number,
@@ -271,16 +269,17 @@ def storyboard(
         if len(list(written_packets)) == 0:
             print("There aren't any written packets in the source folder.")
             return
-        if dest_dir is None:
-            dest_dir = src_dir
         if len(list(written_packets)) == n_packet:
             make_hybrid = True
             hybrid_packets = n_packet * [None]
             hybrid_answers = n_packet * [ans_db["Number"].max() * [None]]
         else:
             print(
-                "Number of placeholder packets doesn't match the number of written packets."
+                f"Number of packets in the visual answerline database ({n_packet}) doesn't match the number of existing written packets ({len(list(written_packets))})."
             )
+            return
+        if dest_dir is None:
+            dest_dir = src_dir
 
     for i in range(n_packet):  # Loop over packets
         if (split_docs) or ((not split_docs) and (i == 0)):
@@ -422,12 +421,12 @@ def storyboard(
                     else:
                         dir_raw = ""
                     answers[i][j].add_run(dir_raw).font.color.rgb = RGBColor(
-                        0x66, 0x66, 0x66
-                    )
+                        0, 0, 0
+                    ).from_string(note_color)
                     if make_hybrid:
                         hybrid_answers[i][j].add_run(dir_raw).font.color.rgb = RGBColor(
-                            0x66, 0x66, 0x66
-                        )
+                            0, 0, 0
+                        ).from_string(note_color)
                 else:  # Prepare the slide annotations, if it's not a film
                     if q_db.iloc[0]["Answerline_Type"] not in people:
                         # Extract the metadata for sources that are films
@@ -560,8 +559,8 @@ def storyboard(
                                         src_run = hybrid_answers[i][j].add_run(srcs[l])
                                         src_run.italic = True
                                         src_run.font.color.rgb = RGBColor(
-                                            0x66, 0x66, 0x66
-                                        )
+                                            0, 0, 0
+                                        ).from_string(note_color)
                                 if pd.isna(film_data.iloc[k]["Source_Type"]) or (
                                     film_data.iloc[k]["Source_Type"] in media
                                 ):
@@ -574,8 +573,8 @@ def storyboard(
                                     note_color
                                 )
                         hybrid_answers[i][j].add_run(")").font.color.rgb = RGBColor(
-                            0x66, 0x66, 0x66
-                        )
+                            0, 0, 0
+                        ).from_string(note_color)
 
                 # If hybrid, write the author tag
                 if make_hybrid and tags:
