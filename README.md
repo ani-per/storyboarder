@@ -13,8 +13,8 @@ It automatically creates:
 ## Requirements
 
 * [Python(3)](https://www.python.org/downloads/)
-* [A properly-configured visual answerline database CSV](demo/Untitled-Film-Set_Database.csv)
-* If `hybrid` is configured, [a set of packets as Word documents](demo/packets/) that contain the questions for the written portion of a hybrid tournament
+* [A properly-configured visual answerline database CSV](demo/untitled-film-set/Untitled-Film-Set_Database.csv)
+* If `hybrid` is configured, [a set of packets as Word documents](demo/untitled-film-set/packets/) that contain the questions for the written portion of a hybrid tournament
 
 ## Contents
 
