@@ -1,10 +1,13 @@
 from pathlib import Path  # Filepaths
 from typing import Tuple  # Argument / output type checking
-from re import sub, search, findall, split # String operations
+from re import sub, search, findall, split  # String operations
 from itertools import compress
 
 import pandas as pd  # DataFrames
 import docx as docx  # Word documents - https://github.com/python-openxml/python-docx
+from docx.enum.style import WD_STYLE_TYPE  # Custom styles
+from docx.dml.color import ColorFormat  # Custom colors
+from docx.shared import RGBColor  # RGB colors
 from haggis.files.docx import (
     list_number,
 )  # Misc Word document utils - https://gitlab.com/madphysicist/haggis
@@ -40,6 +43,7 @@ def make_curly(str: str) -> str:
 
 
 def style_doc(tmpl):
+    # Set TNR as default font
     tmpl.styles["Title"].font.name = "Times New Roman"
     tmpl.styles["Heading 1"].font.name = "Times New Roman"
     tmpl.styles["Normal"].font.name = "Times New Roman"
@@ -68,6 +72,7 @@ def write_answerline(
     pg_ans: str,
     alt_ans: list,
     ans_type: str,
+    pg_color="666666",
 ):
     """Write the database answerline to a given paragraph in a document.
 
@@ -77,6 +82,7 @@ def write_answerline(
         pg_ans (str): The pronunciation guide for the answerline.
         alt_ans (str): The list of alternate answerlines.
         ans_type (str): The class of the answerline in the database (e.g. "Film", "Creator", "Director", "Crew", "Figure", "Surname", "Misc").
+        pg_color (str, optional): The color for pronunciation guides and notes. Default is Google Docs' `dark grey 3`.
     """
     articles = (
         "A ",
@@ -129,7 +135,7 @@ def write_answerline(
         main_run.underline = True
 
     # Add the pronunciation guide
-    ans_par.add_run(pg_ans)
+    ans_par.add_run(pg_ans).font.color.rgb = RGBColor(0, 0, 0).from_string(pg_color)
 
     # Style the alt answerlines if they exist
     n_alt_ans = len(alt_ans)
@@ -194,6 +200,7 @@ def storyboard(
     try_open: bool = False,
     n_visual_questions: int = 10,
     n_total_questions: int = 20,
+    note_color="666666",
 ):
     """Create the visual answerline document, and hybrid packets along the way if desired.
 
@@ -212,6 +219,7 @@ def storyboard(
         try_open (bool, optional): Try to open the generated answerlines document. Defaults to False.
         n_visual_questions (int, optional): The number of visual questions in each packet, if hybrid. Defaults to 10.
         n_total_questions (int, optional): The number of total questions in each packet, including written and visual if hybrid. Defaults to 20.
+        note_color (str, optional): The color for pronunciation guides and notes. Default is Google Docs' `dark grey 3`.
     """
     media = ["Film", "Music Video", "Video", "Television"]
     people = ["Creator", "Director"]
@@ -244,6 +252,7 @@ def storyboard(
                 )
             elif not split_docs and (i == 0):
                 documents[i] = db_dir / f"{set_slug}_Answers-raw.docx"
+            style_doc(templates[i])
         elif (not split_docs) and (i > 0):
             templates[i] = templates[0]
             documents[i] = documents[0]
@@ -274,7 +283,6 @@ def storyboard(
             )
 
     for i in range(n_packet):  # Loop over packets
-        style_doc(templates[i])
         if (split_docs) or ((not split_docs) and (i == 0)):
             templates[i].add_heading(f"{set_name} - Visual Answerlines", level=0)
         elif (not split_docs) and (i > 0):
@@ -339,12 +347,12 @@ def storyboard(
                     pg_ans,
                     alt_ans,
                     q_db.iloc[0]["Answerline_Type"],
+                    pg_color=note_color,
                 )
 
                 # If hybrid, make the placeholder question
                 if make_hybrid:
-                    if j > 0:
-                        hybrid_docx.add_paragraph("")
+                    hybrid_docx.add_paragraph("")
                     slide_q = hybrid_docx.add_paragraph(f"{j + n_written + 1}. ")
                     slide_runs = n_slide * [None]
                     for k in range(n_slide):  # Loop over slides
@@ -380,6 +388,7 @@ def storyboard(
                         pg_ans,
                         alt_ans,
                         q_db.iloc[0]["Answerline_Type"],
+                        pg_color=note_color,
                     )
 
                 # Print the source metadata (creators, directors)
@@ -397,45 +406,57 @@ def storyboard(
                             else "",
                         )
                         if results["total_results"] > 0:
-                            director = make_curly(", ".join(
-                                [
-                                    crew["name"]
-                                    for crew in movie.credits(
-                                        results["results"][0].id
-                                    ).crew
-                                    if crew["job"] == "Director"
-                                ]
-                            ))
+                            director = make_curly(
+                                ", ".join(
+                                    [
+                                        crew["name"]
+                                        for crew in movie.credits(
+                                            results["results"][0].id
+                                        ).crew
+                                        if crew["job"] == "Director"
+                                    ]
+                                )
+                            )
                     if len(director) > 0:
                         dir_raw = f" (dir. {director})"
                     else:
                         dir_raw = ""
-                    answers[i][j].add_run(dir_raw)
+                    answers[i][j].add_run(dir_raw).font.color.rgb = RGBColor(
+                        0x66, 0x66, 0x66
+                    )
                     if make_hybrid:
-                        hybrid_answers[i][j].add_run(dir_raw)
+                        hybrid_answers[i][j].add_run(dir_raw).font.color.rgb = RGBColor(
+                            0x66, 0x66, 0x66
+                        )
                 else:  # Prepare the slide annotations, if it's not a film
                     if q_db.iloc[0]["Answerline_Type"] not in people:
                         # Extract the metadata for sources that are films
-                        film_data = q_db[["Source", "Source_Type", "Source_Year", "Creator"]].drop_duplicates().reset_index(drop=True)
+                        film_data = (
+                            q_db[["Source", "Source_Type", "Source_Year", "Creator"]]
+                            .drop_duplicates()
+                            .reset_index(drop=True)
+                        )
 
-                        for k in range(len(film_data)): # Loop over films
-                            if (pd.isna(film_data["Creator"][k])):
+                        for k in range(len(film_data)):  # Loop over films
+                            if pd.isna(film_data["Creator"][k]):
                                 results = search.movies(
-                                    film_data['Source'][k],
+                                    film_data["Source"][k],
                                     year=film_data["Source_Year"][k]
                                     if pd.notna(film_data["Source_Year"][k])
                                     else "",
                                 )
                                 if results["total_results"] > 0:
-                                    film_data.at[k, "Creator"] = make_curly(", ".join(
-                                        [
-                                            crew["name"]
-                                            for crew in movie.credits(
-                                                results["results"][0].id
-                                            ).crew
-                                            if crew["job"] == "Director"
-                                        ]
-                                    ))
+                                    film_data.at[k, "Creator"] = make_curly(
+                                        ", ".join(
+                                            [
+                                                crew["name"]
+                                                for crew in movie.credits(
+                                                    results["results"][0].id
+                                                ).crew
+                                                if crew["job"] == "Director"
+                                            ]
+                                        )
+                                    )
 
                     slides[i][j] = n_slide * [None]
                     for k in range(n_slide):  # Loop over slides
@@ -453,22 +474,29 @@ def storyboard(
                             src_run.italic = True
 
                         # If the question's not on a creator, add the director credit for the source of the current slide
-                        if (
-                            q_db.iloc[0]["Answerline_Type"]
-                            not in people
-                        ):
+                        if q_db.iloc[0]["Answerline_Type"] not in people:
                             creator = ""
                             if pd.notna(q_db.iloc[k]["Creator"]):
                                 creator = q_db.iloc[k]["Creator"]
                             else:
-                                creator = film_data["Creator"][film_data["Source"].eq(q_db.iloc[k]["Source"]).idxmax()]
+                                creator = film_data["Creator"][
+                                    film_data["Source"]
+                                    .eq(q_db.iloc[k]["Source"])
+                                    .idxmax()
+                                ]
 
-                            if pd.isna(q_db.iloc[k]["Source_Type"]) or (q_db.iloc[k]["Source_Type"] in media):
+                            if pd.isna(q_db.iloc[k]["Source_Type"]) or (
+                                q_db.iloc[k]["Source_Type"] in media
+                            ):
                                 credit = "dir."
                             else:
                                 credit = "by"
                             if (pd.notna(creator)) and (len(creator) > 0):
-                                slides[i][j][k].add_run(f" ({credit} {creator})")
+                                slides[i][j][k].add_run(
+                                    f" ({credit} {creator})"
+                                ).font.color.rgb = RGBColor(0, 0, 0).from_string(
+                                    note_color
+                                )
 
                         # Format the annotation as a list element
                         if k == 0:
@@ -482,38 +510,72 @@ def storyboard(
 
                     # If hybrid, write the sources in the visual question as a note
                     if make_hybrid:
-                        hybrid_answers[i][j].add_run(" (Sources: ")
+                        hybrid_answers[i][j].add_run(
+                            " (Sources: "
+                        ).font.color.rgb = RGBColor(0, 0, 0).from_string(note_color)
                         if q_db.iloc[0]["Answerline_Type"] in people:
                             films = q_db["Source"][q_db["Source"].notnull()].unique()
                             for k in range(len(films)):  # Loop over films
                                 if k > 0:
-                                    hybrid_answers[i][j].add_run("; ")
-                                hybrid_answers[i][j].add_run(films[k]).italic = True
+                                    hybrid_answers[i][j].add_run(
+                                        "; "
+                                    ).font.color.rgb = RGBColor(0, 0, 0).from_string(
+                                        note_color
+                                    )
+                                src_run = hybrid_answers[i][j].add_run(films[k])
+                                src_run.italic = True
+                                src_run.font.color.rgb = RGBColor(0, 0, 0).from_string(
+                                    note_color
+                                )
                         else:
                             directors = film_data["Creator"].unique()
                             for k in range(len(directors)):  # Loop over directors
-                                srcs = film_data[film_data["Creator"] == directors[k]]["Source"].unique()
+                                srcs = film_data[film_data["Creator"] == directors[k]][
+                                    "Source"
+                                ].unique()
                                 if k > 0:
-                                    hybrid_answers[i][j].add_run("; ")
+                                    hybrid_answers[i][j].add_run(
+                                        "; "
+                                    ).font.color.rgb = RGBColor(0, 0, 0).from_string(
+                                        note_color
+                                    )
                                 for l in range(len(srcs)):
                                     if l > 0:
-                                        hybrid_answers[i][j].add_run(", ")
+                                        hybrid_answers[i][j].add_run(
+                                            ", "
+                                        ).font.color.rgb = RGBColor(
+                                            0, 0, 0
+                                        ).from_string(note_color)
                                     if srcs[
                                         l
                                     ].startswith(
                                         ("'", '"', "‘", "“")
                                     ):  # Don't italicize if title's in quotes (e.g. music video)
-                                        hybrid_answers[i][j].add_run(srcs[l])
-                                    else:
                                         hybrid_answers[i][j].add_run(
                                             srcs[l]
-                                        ).italic = True
-                                if pd.isna(film_data.iloc[k]["Source_Type"]) or (film_data.iloc[k]["Source_Type"] in media):
+                                        ).font.color.rgb = RGBColor(
+                                            0, 0, 0
+                                        ).from_string(note_color)
+                                    else:
+                                        src_run = hybrid_answers[i][j].add_run(srcs[l])
+                                        src_run.italic = True
+                                        src_run.font.color.rgb = RGBColor(
+                                            0x66, 0x66, 0x66
+                                        )
+                                if pd.isna(film_data.iloc[k]["Source_Type"]) or (
+                                    film_data.iloc[k]["Source_Type"] in media
+                                ):
                                     credit = "- dir."
                                 else:
                                     credit = "by"
-                                hybrid_answers[i][j].add_run(f" {credit} {directors[k]}")
-                        hybrid_answers[i][j].add_run(")")
+                                hybrid_answers[i][j].add_run(
+                                    f" {credit} {directors[k]}"
+                                ).font.color.rgb = RGBColor(0, 0, 0).from_string(
+                                    note_color
+                                )
+                        hybrid_answers[i][j].add_run(")").font.color.rgb = RGBColor(
+                            0x66, 0x66, 0x66
+                        )
 
                 # If hybrid, write the author tag
                 if make_hybrid and tags:
