@@ -10,22 +10,22 @@ Storyboarder automatically creates:
 > [!IMPORTANT]
 > The hybrid packet generation is compatible with both [Oligodendrocytes](https://github.com/hftf/oligodendrocytes) and [MODAQ](https://github.com/alopezlago/MODAQ) (which also uses [YAPP](https://github.com/alopezlago/YetAnotherPacketParser)). The pipeline to interface with MODAQ has been thoroughly tested for [Untitled Film Set](https://collegiate.quizbowlpackets.com/3197/).
 
-## Requirements
-
-* [Python(3)](https://www.python.org/downloads/)
-* [A properly-configured visual answerline database CSV](demo/untitled-film-set/Untitled-Film-Set_Database.csv)
-* If `hybrid` is configured, [a set of packets as Word documents](demo/untitled-film-set/packets/) that contain the questions for the written portion of a hybrid tournament
-
 ## Contents
 
 * [Google Drive folder](https://drive.google.com/drive/folders/1uJXE8UJXxA2VepXUR7n4mBuHC4J9txpS?usp=sharing)
   * [Google Slides template for standardized, color-coded visual packets](https://docs.google.com/presentation/d/1CbMiGaGSL4gyph7laR1obxKAvC_3cW-cDHVXUdTcqBk/edit?usp=sharing) [^1]
-  * [A visual answerline database template](https://docs.google.com/spreadsheets/d/1r6tFbcZvPioG1RqSINoclno7yGYWZSv-Ygo0qBbxQq0/edit?usp=sharing) [^2] (which should be exported as a CSV once configured)
+  * A [visual answerline database template](https://docs.google.com/spreadsheets/d/1r6tFbcZvPioG1RqSINoclno7yGYWZSv-Ygo0qBbxQq0/edit?usp=sharing) [^2] (which should be exported as a CSV once configured)
 * Python scripts
   * [`storyboarder.py`](storyboarder.py)
-    * The backend script that, given a properly-configured visual answerline database CSV, performs the generation of the visual answerline document and hybrid packets.
+    * The backend script that generates the visual answerline document and hybrid packets by parsing a [properly-configured visual answerline database CSV](demo/untitled-film-set/Untitled-Film-Set_Database.csv)
   * [`config.py`](config.py)
     * The front-facing script that configures the set metadata and how to perform the creation.
+
+## Requirements
+
+* [Python(3)](https://www.python.org/downloads/)
+* A [properly-configured visual answerline database CSV](demo/untitled-film-set/Untitled-Film-Set_Database.csv)
+* If `hybrid` is configured, a [set of packets as Word documents](demo/untitled-film-set/packets/) that contain the questions for the written portion of a hybrid tournament
 
 ## Usage
 
