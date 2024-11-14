@@ -1,11 +1,8 @@
 # Storyboarder
 
-**Storyboarder** is an assistant for writing visual quizbowl sets, created by Ani Perumalla in 2024. Storyboarder can handle sets/packets that are **fully visual** (e.g. [Eyes That Do Not See](https://collegiate.quizbowlpackets.com/1906/)) or **hybrid written + visual** (e.g. [Untitled Film Set](https://collegiate.quizbowlpackets.com/3197/)). The primary purpose is to assist in production of film sets, but Storyboarder can be used for visual packets that draw from any combination of media (film, television, online videos, art, photography, literature, etc.).
+**[Storyboarder](https://github.com/ani-per/storyboarder)** is an assistant for writing visual quizbowl sets, created by Ani Perumalla in 2024. Storyboarder can handle sets/packets that are **hybrid written + visual** (e.g. [Untitled Film Set](https://collegiate.quizbowlpackets.com/3197/)) or **fully visual** (e.g. [Eyes That Do Not See](https://collegiate.quizbowlpackets.com/1906/)). The primary purpose is to assist in production of film sets, but Storyboarder can be used for visual packets that draw from any combination of media (film, television, online videos, art, photography, literature, etc.).
 
-Storyboarder automatically creates:
-
-* A roughly-formatted visual answerline document that contains both answerlines and slide-by-slide information for each visual question.
-* If `hybrid` is configured, a set of hybrid packets that contain any combination of written and visual questions, for convenient use by moderators using [Oligodendrocytes](https://github.com/hftf/oligodendrocytes) or [MODAQ](https://github.com/alopezlago/MODAQ).
+The main component of Storyboarder is a script that automatically generates a set of hybrid packets by parsing a set of written questions and a CSV containing metadata about a set of visual questions.
 
 > [!IMPORTANT]
 > The hybrid packet generation is compatible with both [Oligodendrocytes](https://github.com/hftf/oligodendrocytes) and [MODAQ](https://github.com/alopezlago/MODAQ) (which also uses [YAPP](https://github.com/alopezlago/YetAnotherPacketParser)). The pipeline to interface with MODAQ has been thoroughly tested for [Untitled Film Set](https://collegiate.quizbowlpackets.com/3197/).
@@ -26,6 +23,11 @@ Storyboarder automatically creates:
 * [Python(3)](https://www.python.org/downloads/)
 * A [properly-configured visual answerline database CSV](demo/untitled-film-set/Untitled-Film-Set_Database.csv)
 * If `hybrid` is configured, a [set of packets as Word documents](demo/untitled-film-set/packets/) that contain the questions for the written portion of a hybrid tournament
+
+## Outputs
+
+* A roughly-formatted visual answerline document that contains both answerlines and slide-by-slide information for each visual question
+* If `hybrid` is configured, a set of hybrid packets that contain any combination of written and visual questions, for convenient use by moderators using [Oligodendrocytes](https://github.com/hftf/oligodendrocytes) or [MODAQ](https://github.com/alopezlago/MODAQ)
 
 ## Usage
 
