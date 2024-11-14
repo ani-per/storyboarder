@@ -1,6 +1,6 @@
 # Storyboarder
 
-**[Storyboarder](https://github.com/ani-per/storyboarder)** is an assistant for writing visual quizbowl sets, created by Ani Perumalla in 2024. Storyboarder can handle sets/packets that are **hybrid written + visual** (e.g. [Untitled Film Set](https://collegiate.quizbowlpackets.com/3197/)) or **fully visual** (e.g. [Eyes That Do Not See](https://collegiate.quizbowlpackets.com/1906/)). The primary purpose is to assist in production of film sets, but Storyboarder can be used for visual packets that draw from any combination of media (film, television, online videos, art, photography, literature, etc.).
+**[Storyboarder](https://github.com/ani-per/storyboarder)** is an assistant that helps in writing visual quizbowl sets by automating cumbersome parts of the process. Storyboarder can help create sets/packets that are **hybrid written + visual** (e.g. [Untitled Film Set](https://collegiate.quizbowlpackets.com/3197/)) or **fully visual** (e.g. [Eyes That Do Not See](https://collegiate.quizbowlpackets.com/1906/)). The primary purpose is to assist in production of film sets, but Storyboarder can be used for visual packets that draw from any combination of media (film, television, online videos, art, photography, literature, etc.).
 
 The main component of Storyboarder is a script that automatically generates a set of hybrid packets by parsing a set of written questions and a CSV containing metadata about a set of visual questions.
 
@@ -77,9 +77,11 @@ See the [`demo/untitled-film-set`](demo/untitled-film-set/) directory of this re
 
 ## History
 
-`2024-03-24`: This project was created to handle setup for mirrors of [Untitled Film Set](https://hsquizbowl.org/forums/viewtopic.php?t=25325) (privately, since the set was used for testing and was not yet played at that time).
+`2024-03-24`: This project was created by Ani Perumalla to handle setup for mirrors of [Untitled Film Set](https://hsquizbowl.org/forums/viewtopic.php?t=25325) (privately, since the set was used for testing and was not yet played at that time).
 
 `2024-09-27`: The scripts were updated to automatically populate answerlines with information about film directors, using the [`tmdbv3api` package](https://github.com/AnthonyBloomer/tmdbv3api).
+
+`2024-11-14`: The project was shared publicly [on the HSQB forums](https://hsquizbowl.org/forums/viewtopic.php?t=28518).
 
 ## Feedback
 
